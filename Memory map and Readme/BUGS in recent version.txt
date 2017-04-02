@@ -1,0 +1,26 @@
+Assembler:    
+
+-some IX+ and IY+ bit manuplation commands not added
+-during assembly very short wrong inputs may be cause of crash of assembler (then just start W to warmstart and restart assembler)
+-------------------------------------------------------------------------------------------------
+Disassembler:
+
+-Randomise memory area with no codes may be cause of conflict to protect this ; fill with 00h  unused memory
+	(Written area dissasembly is rock solid  :)  )
+----------------------------------------------------------------------------------------------------
+
+Intel HEX transmisions:
+
+-checksum and partiy control not added (but I didnt see any errors during work)
+
+--------------------------------------------------------------------------------------------------------
+Hexadecimal inputs:
+
+-System is not checking input is hexadecimal or just  random ascii: So random alphanumeric input may be cause of conflict
+-Backspace is not added: If you make mistake in input, press ESC and make input from begining
+
+
+------------------------------------------------------------------------------------------------------------
+Commands:
+
+-Fill and Registes commands not added yet
