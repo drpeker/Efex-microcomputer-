@@ -1,0 +1,70 @@
+1- CTS VE RTS connected to GND 
+2- CLK connected to system clock (4-8MHZ)
+3-RXC and TXC connected together and wired to divided clock out
+4-for z80; invert system Reset\ signal and connect to 8251 Reset in
+5-If you plan use of INT; invert 8251 pin 14 and connect to system IRQ\
+6-Do not use electrolytic condansator on z80 reset circuit. use just a pullup resistor and mini button to GND
+7-8251 C/D_ pin connected to A0 of system
+8- System clock must be minimum 30x faster than 8251 divided clock in
+INIT CODE:        ;  00=DATA ADRESS, 01=REGISTER ADRESS FOR 8251
+---------------------------------------------------------------------------------------------------------------
+INIT8251:	
+
+        LD A,040H            
+        OUT (001H),A  
+        NOP
+	NOP  
+        LD A,040H            
+        OUT (001H),A
+	NOP
+	NOP  
+                  
+        LD A,040H            
+        OUT (001H),A  ; WORST CASE INIT
+	NOP
+	NOP
+	
+	
+	
+        LD A,040H            
+        OUT (001H),A  		; RESET 8251
+        NOP
+	NOP
+
+        LD A,04EH            
+        OUT (001H),A      	 ; 8-N-1  CLK/1  4EH FOR /16, 4D FOR /1  (MODE )
+        NOP
+	NOP    
+        LD A,037H            
+        OUT (001H),A      	 ; RESET ALL ERROR FLAGS AND ENABLE RXRDY,TXRDY (COMMAND)
+
+
+TRANSMITT DATA CODE;   ;  00=DATA ADRESS, 01=REGISTER ADRESS FOR 8251
+----------------------------------------------------------------------------
+TXD:    PUSH AF
+LOPTX: 	IN A,(01H)
+	AND 001H     ;TXRDY?
+	JP Z, LOPTX
+        POP AF
+	OUT (00H),A
+                   
+	RET
+
+
+
+RECEIVE DATA CODE;     ;  00=DATA ADRESS, 01=REGISTER ADRESS FOR 8251
+--------------------------------------------------------------------------------
+
+RXD:    
+	LD A,037H
+	OUT (01),A ;ENABLE TX AND RX AND CLEAR ERR BITS
+	
+LOPTR: 	IN A,(01H)
+	AND 002H     ;TXRDY?
+	JP Z, LOPTR
+        IN A,(00H)   ;RECEIVE CHAR
+	RET
+
+
+
+
