@@ -23,4 +23,4 @@ Hexadecimal inputs:
 ------------------------------------------------------------------------------------------------------------
 Commands:
 
--Fill and Registes commands not added yet
+-(F)ill and (R)egisters  commands not added yet
