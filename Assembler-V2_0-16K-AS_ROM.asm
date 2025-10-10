@@ -421,32 +421,7 @@ NOT_A_HEX:
     SCF                 ; Carry bayrağını set et (hata sinyali)
     RET    
 ;------------hex to byte from buffer ended------------------------------------
-;****************************************************************
-;* PARSE_HEX_ADDRESS ALT PROGRAMI                               *
-;* Açıklama: HL'nin gösterdiği yerden başlayarak 1-4 haneli hex *
-;* bir adresi okur. Sonucu DE register'ına yazar.               *
-;* Girdi: HL = Buffer'da adresin başladığı yer                   *
-;* Çıktı: Başarılıysa -> Carry=0, DE=16-bit adres, HL=sonraki karakter*
-;* Başarısızsa -> Carry=1 (hiç hex karakter bulunamadıysa)      *
-;****************************************************************
-; ------------------------------------------------------------
-; PARSE_HEX_ADDRESS  (Z80 mnemonics, 8085-compatible)
-;  In : HL -> girdi metni (hexdigit'lerle başlıyor olabilir)
-; Out : CF=0 ve DE = parsed 16-bit değer, HL = ilk hexdigit olmayan
-;       CF=1 (hata: hiç hexdigit yok) ve HL girişteki konumda
-; Clobbers: A, B, C, D, E, F   (HL çağrı sözleşmesine göre güncellenir)
-; Notlar:
-; - En fazla 4 hexdigit okunur (16-bit sınırı). 5. hexdigit bırakılır.
-; - '0'..'9', 'A'..'F', 'a'..'f' kabul edilir (buffer değiştirilmez).
-; ------------------------------------------------------------
-;******************************************************************************
-;* PARSE_HEX_ADDRESS (Nihai Sürüm - Basit, Kararlı, Z80 Sözdizimli)           *
-;* Açıklama: HL'nin gösterdiği yerden 1-4 haneli hex adresi okur.            *
-;* Sonucu sağa dayalı olarak hesaplar (Örn: "F" -> 000FH, "1F4" -> 01F4H).     *
-;* Girdi: HL = Ana buffer'da adresin başladığı yer                            *
-;* Çıktı: Başarılıysa -> Carry=0, DE=16-bit adres, HL=sayıdan sonraki karakter *
-;* Başarısızsa -> Carry=1 (hiç hex karakter bulunamadıysa)             *
-;******************************************************************************
+
 ;******************************************************************************
 ;* PARSE_HEX_ADDRESS (Sıfırdan Yazılmış Nihai Versiyon)                       *
 ;* Açıklama: HL'nin gösterdiği yerden 1-4 haneli hex adresi okur.            *
@@ -531,14 +506,7 @@ PARSE_ERROR_FINAL:
     RET
 ;----------------ADRESS PARSER (FROM BUFFER) ENDED-----------------  
 
-;******************************************************************************
-;* PARSE_HEX_BYTE ALT PROGRAMI (Yeni)                                         *
-;* Açıklama: HL'nin gösterdiği yerden 1 veya 2 haneli hex sayıyı okur.        *
-;* Sonucu 8-bit olarak A register'ına yazar.                                  *
-;* Girdi: HL = Ana buffer'da sayının başladığı yer                            *
-;* Çıktı: Başarılıysa -> Carry=0, A=8-bit değer, HL=sayıdan sonraki karakter   *
-;* Başarısızsa -> Carry=1 (hiç hex karakter bulunamadıysa)               *
-;******************************************************************************
+
 ;******************************************************************************
 ;* PARSE_HEX_BYTE (YENİ, GÜVENLİ ve BASİT Versiyon)                           *
 ;* Açıklama: HL'nin gösterdiği yerden 1 veya 2 haneli hex sayıyı okur.        *
@@ -1218,13 +1186,6 @@ AS_SYNTAX_ERROR:
     CALL PRINT
     JP AS_DON               
 
-
-;---------------INTERPRETER STARTS HERE--------------------------
-
-;---------------INTERPRETER STARTS HERE--------------------------            
-
-
-;---------------INTERPRETER STARTS HERE--------------------------
 
 ;---------------INTERPRETER STARTS HERE--------------------------
 
@@ -4392,4 +4353,5 @@ CODEND:	.DB 0,0,0,0,0,0,0,0
 
 	
 		
+
 	.END
