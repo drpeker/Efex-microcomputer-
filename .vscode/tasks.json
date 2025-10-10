@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Assemble with zasm (WSL)",
+      "type": "shell",
+      "command": "wsl",
+      "args": [
+        "/mnt/c/zasm-master/zasm",
+        "${fileBasename}"
+
+
+         //"--reqcolon",
+         "-uwy",
+        "--target=ram", //Hex file doğru adreslerle oluşturulsun  
+        "--reqcolon"
+        
+         "-x", //Binary output - b, Hex output -x
+
+        
+      ],
+      "options": {
+        "cwd": "${fileDirname}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
