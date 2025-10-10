@@ -1,0 +1,4047 @@
+                        ; --------------------------------------
+                        ; zasm: assemble "Assembler-V1_0-8K-AS_ROM.asm"
+                        ; opts: --reqcolon
+                        ; date: 2025-09-25 14:31:26
+                        ; --------------------------------------
+
+
+                        ;-------------------------------------------------
+                        ;Z80 DISASSEMBLER LISTING
+                        ;Label  Instruction
+                        ;-------------------------------------------------
+                        
+                        ;VERSION HISTORY 
+                        
+                        ; AFTER DDCB COMMANDS EXCLUDED
+                        ;FILL ADDED, DISASSEMBLER NOTFOUNT RESULT IMPROVED
+                        ;ASSEMBLER HAVE LIMITED BACKSPACE
+                        ;HEX INPUT IMPROVED
+                        
+                        
+                        
+                        ;INTLIN1 TURNED INTO SUBROUTINE
+                        ;S-AVE, L-OAD, E-DIT,R-UN,M-OVE COMMANDS ADDED
+                        ;EFEX INLINE ASSEMBLER V.087 - 06.APR.2017
+                        
+                        ;SYSTEM VARIABLES:
+                        ;3F60-3F6F  :COMMAND INPUT BUFFER			;COMINBUF
+                        ;3FA0-3FA1  :COMMAND LINE LENGHT TO BE TRANSLATED	;LINELENGHT
+                        ;3F80-3F90  :CODE BUFFER-----				;CODEBUF
+                        ;3FA2-3FA3  :MNEMONIC TABLE FFINDED INDEX ADRESS	;TABFINDAD
+                        ;3FA4-3FA5  :ASSEMBLY ADRESS				;ASADR
+                        ;3FA6-3FA7  :ASSEMBLY ADRES + CODES TO WRITE MEMORY	;ASADCODE
+                        ;3FB0	    :OPERAND BYTE COUNT				;OPBYTECNT
+                        ;3FB2	    : # OR $ OR NULL				;DIYEZDOLAR
+                        ;3F42       :# CONTENT (DATA)				;DATAINP
+                        ;3F43-3F44  :$ CONTENT (ADRESS)				;ADRSINP
+                        ;3FB3-3FB4  :CODE BUF. LENGHT				;CODEBUFLEN
+                        ;
+                        ;
+                        ;ASSEMBLER VARIABLES FOR ROM:
+FF60:                     	COMINBUF .EQU 0FF60H    ;10H CHAR LENGHT
+FF80:                   	CODEBUF .EQU 0FF80H	;10H CHAR LENGHT
+FFA0:                   	LINELENGHT .EQU 0FFA0H	;2 BYTE
+FFA2:                   	TABFINDAD .EQU 0FFA2H	;2 BYTE
+FFA4:                   	ASADR .EQU 0FFA4H		;2 BYTE
+FFA6:                   	ASADCODE .EQU 0FFA6H	;2 BYTE
+FFB0:                   	OPBYTECNT .EQU 0FFB0H	;1 BYTE
+FFB2:                   	DIYEZDOLAR .EQU 0FFB2H	;1 BYTE
+FF42:                   	DATAINP .EQU 0FF42H	;1 BYTE
+FF43:                   	ADRSINP .EQU 0FF43H	;2 BYTE
+FFB3:                   	CODEBUFLEN .EQU 0FFB3H	;2 BYTE
+                        
+FF20:                   	KEYINBUF .EQU 0FF20H	;4 BYTE
+FF40:                   	KEYINRES .EQU 0FF40H	;4 BYTE
+                        	
+                        ;HEX RECORD VARIABLES FOR ROM
+FF4B:                   	HEXLDREG .EQU 0FF4BH	;2 BYTE
+FF50:                   	LOADSTADR .EQU 0FF50H	;2 BYTE
+FF34:                   	SAVECHCK .EQU 0FF34H	;2 BYTE
+FF32:                   	LOWNIBBLE .EQU 0FF32H	;1 BYTE
+FF33:                   	HIGHNIBBLE .EQU 0FF33H	;1 BYTE
+                        ;EDIT ADRESS
+F906:                   	EDITADR .EQU 0F906H
+                        ;INTERRUPT (IM1, 0038) ADRESS POINTER
+F908:                   	INTADRS .EQU 0F908H  ;INT ADRESS POINTER
+                        			     ;INTADRES +2: 090A : NMI POINTER
+                        ;STACK POINTER;
+F7FD:                   	STACKPOINT .EQU  0F7FDH	;2 BYTE ; UNCOMMENT THIS TO RUN IN ROM
+                        
+                        	
+                        
+                        ;-------------------------------------------------
+                        ;4 mhz clock,1834 uart clock (DIVIDE BY 16),  8k rom, 8k ram
+                        ;PORT 00:UART data, port 01 control/status
+                        ;PORT 08:8255    08 input,  09 and 0A output
+                        ;
+0000:                   	.org 00000H    ;CHANGE 0000 RO RUN IN ROM!
+                        	
+0000: 31FDF7   [10]     	LD SP,STACKPOINT  ; STACK AT THE END OF  RAM
+0003: 217200   [20]     	LD HL,MA_IN	  ;DEFAULT INTERUPT ROUTINE IS MA_IN PROGRAM
+0006: 2208F9   [36]     	LD (INTADRS),HL
+0009: ED56     [44]             IM 1
+000B: FB       [48]     	EI
+                        	;DI		;DEFAULT: INTERRUPTS DISABLED
+                        	
+                        	
+                        ;	JP GREET       ; TURN TO COMMENT TO RUN IN ROM
+                        
+                        
+                               
+                        
+                        
+                        ;----------------INIT-8251----------------------------------
+                        
+                        
+                        
+                        
+000C:                   INIT8255:
+000C: 3E90     [ 7]     	LD A,90H
+000E: D30B     [18]     	OUT (00BH),A
+0010:                   INIT8251:	
+                        
+0010: 3E40     [ 7]             LD A,040H            
+0012: D301     [18]             OUT (001H),A  
+0014: 00       [22]             NOP
+0015: 00       [26]     	NOP  
+0016: 3E40     [33]             LD A,040H            
+0018: D301     [44]             OUT (001H),A
+001A: 00       [48]     	NOP
+001B: 00       [52]     	NOP  
+                                          
+001C: 3E40     [59]             LD A,040H            
+001E: D301     [70]             OUT (001H),A  ; WORST CASE INIT
+0020: 00       [74]     	NOP
+0021: 00       [78]     	NOP
+                        	
+                        	
+                        	
+0022: 3E40     [85]             LD A,040H            
+0024: D301     [96]             OUT (001H),A  		; RESET 8251
+0026: 00       [100]            NOP
+0027: 00       [104]    	NOP
+                        
+0028: 3E4E     [111]            LD A,04EH            
+002A: D301     [122]            OUT (001H),A      	 ; 8-N-1  CLK/1  4EH FOR /16, 4D FOR /1  (MODE )
+002C: 00       [126]            NOP
+002D: 00       [130]    	NOP    
+002E: 3E37     [137]            LD A,037H            
+0030: D301     [148]            OUT (001H),A      	 ; RESET ALL ERROR FLAGS AND ENABLE RXRDY,TXRDY (COMMAND)
+                        
+0032: C36A00   [158]            JP GREET
+                        ;-----------------------------------------------------------------------------------
+                        ;   UNCOMMENT THIS TO RUN IN ROM
+                        
+                        	.ORG 0038H               ;CHANGEABLE INTERRUPT SUBROUTINE
+0038: 2A08F9   [174]    	LD HL,(INTADRS)
+003B: E9       [178]    	JP (HL)
+                        	
+                        ;-------------------------------------------------------------------------------------
+                        	
+                        ;TXD ROUTINE sends contents of A REGISTER  to serial out pin 
+                        ;19200 BAUD, 8-N-1
+                        
+                        
+003C: F5       [11]     TXD:    PUSH AF
+003D: DB01     [11]     LOPTX: 	IN A,(01H)
+003F: E601     [18]     	AND 001H     ;TXRDY?
+0041: CA3D00   [28|28]  	JP Z, LOPTX
+0044: F1       [38]             POP AF
+0045: D300     [49]     	OUT (00H),A
+0047: C9       [59]             RET
+                        	
+                        ;----------------------------------------------------------------------------------
+                        ;RXD ROUTINE receives 1 bayt from serial  to A REGISTER 
+                        ;19200 BAUD, 8-N-1
+                        
+0048:                   RXD:    
+0048: 3E37     [ 7]     	LD A,037H
+004A: D301     [18]     	OUT (01),A ;ENABLE TX AND RX AND CLEAR ERR BITS
+                        	
+004C: DB01     [11]     LOPTR: 	IN A,(01H)
+004E: E602     [18]     	AND 002H     ;TXRDY?
+0050: CA4C00   [28|28]  	JP Z, LOPTR
+0053: DB00     [39]             IN A,(00H)   ;RECEIVE CHAR
+0055: C9       [49]     	RET
+                        	
+                        	
+                        ;-----------------------------------------------------------------------------------
+                        ;   UNCOMMENT THIS TO RUN IN ROM
+                        
+                        	.ORG 0066H               ;CHANGEABLE NMI INTERRUPT SUBROUTINE
+0066: 2A0AF9   [65]     	LD HL,(INTADRS+2)
+0069: E9       [69]     	JP (HL)
+                        	
+                        ;-------------------------------------------------------------------------------------	
+                        	
+                        	
+                        	
+                        		
+                        ;----------------GREETING MESSAGE----------------------
+                        
+                        
+006A:                   GREET:
+                        			 ;GREETING  MSG
+006A: 21890A   [10]     	LD HL,TABLE
+006D: 0639     [17]     	LD B,57   ; DECIMAL IF NOT H AT THE END
+006F: CDBA01   [34]     	CALL PRINT
+                        	
+                        
+                        	
+                        	
+                        
+                        
+                        
+                        ;------------------------MAIN PROGRAM----------------------
+                        
+                        
+0072:                   MA_IN: 
+0072: CDC100   [17]      	CALL PROMPT
+0075: CD4800   [34]     	CALL RXD
+0078: FE53     [41]     	CP 'S'
+007A: CC9E07   [51|58]  	CALL Z, SAVEX		;SAVE IHEX FILE
+007D: FE4C     [58]     	CP 'L'
+007F: CA3209   [68|68]  	JP Z,LOADERZ		;LOAD IHEX FILE
+0082: FE41     [75]     	CP 'A'
+0084: CA4B02   [85|85]  	JP Z,ASSEMBLE		;ASSEMBLER
+0087: FE47     [92]     	CP 'G'
+0089: CAE708   [102|102]	JP Z,RUN_ADR		;GO TO ADRESS
+008C: FE45     [109]    	CP 'E'
+008E: CA7008   [119|119]	JP Z,EDIT		;EDIT ADRESS
+0091: FE4D     [126]    	CP 'M'
+0093: CA7206   [136|136]	JP Z, MOVE		;MOVE MEMORY BLOCKS
+0096: FE48     [143]    	CP 'H'
+0098: CACA00   [153|153]	JP Z, HELP		;HELP SUBROUTINE
+009B: FE57     [160]    	CP 'W'
+009D: CA6A00   [170|170]	JP Z, GREET 		;RESTART
+00A0: FE55     [177]    	CP 'U'
+00A2: CADD00   [187|187]	JP Z, USEFUL		;USEFUL ROUTINES
+00A5: FE44     [194]    	CP 'D'
+00A7: CA5104   [204|204]	JP Z, DISASSEMBLER
+00AA: FE46     [211]    	CP 'F'
+00AC: CA0607   [221|221]	JP Z, FILL
+                        
+                        	
+                        	
+00AF: FE58     [228]    	CP 'X'
+00B1: CAC201   [238|238]	JP Z, HEXDUMP		;DUMP MEMORY CONTENT
+                        	
+00B4: 3E0A     [245]    	LD A, 0AH
+00B6: CD3C00   [262]    	CALL TXD
+00B9: 3E0D     [269]    	LD A, 0DH
+00BB: CD3C00   [286]    	CALL TXD
+00BE: C37200   [296]    	JP MA_IN		;MAIN LOOP OF MONITOR PROGRAM
+                        	
+00C1: 21FC0A   [10]     PROMPT:	LD HL,TABLE6
+00C4: 0606     [17]     	LD B,6   ; DECIMAL IF NOT H AT THE END
+00C6: CDBA01   [34]     	CALL PRINT
+00C9: C9       [44]     	RET
+                        
+                        
+                        	
+                        	
+                        
+                        
+                        
+                        
+                        ;----------------HELP-------------------------
+00CA:                   HELP:	             ;HELP MSG
+00CA: 21020B   [10]     	LD HL,TABLE21
+00CD: 016E00   [20]     	LD BC,110   ; DECIMAL IF NOT H AT THE END
+00D0: 7E       [ 7]     DIS21:	LD A,(HL)
+00D1: CD3C00   [24]     	CALL TXD
+00D4: 23       [30]             INC HL
+00D5: 0B       [36]     	DEC BC
+00D6: 78       [40]     	LD A,B
+00D7: B1       [44]     	OR C
+00D8: 20F6     [51|56]  	JR NZ,DIS21
+                        	
+                        	
+00DA: C37200   [61]     	JP MA_IN
+                        	
+                        
+                        	
+                        ;-------------------USEFUL ROUTINES-----------
+00DD:                   USEFUL:	             ;HELP MSG
+                        
+                        
+00DD: 3E0A     [ 7]     	LD A,0AH
+00DF: CD3C00   [24]     	CALL TXD
+00E2: 3E0D     [31]     	LD A,0DH
+00E4: CD3C00   [48]     	CALL TXD
+                        	
+                        	
+                        ;	LD HL,TABLEH9
+                        ;	LD B,23
+                        ;	CALL PRINT
+                        	
+                        		
+00E7: 21E90B   [58]     	LD HL,TABLE22
+00EA: 060E     [65]     	LD B,14   
+00EC: CDBA01   [82]     	CALL PRINT
+                        	
+                        	
+                        		
+                        
+                        
+00EF: 213C00   [10]     HELP1:	LD HL,TXD
+00F2: 7C       [14]     	LD A,H
+00F3: CD370A   [31]     	CALL HEXOUT
+00F6: 7D       [35]     	LD A,L
+00F7: CD370A   [52]     	CALL HEXOUT
+                        	
+00FA: 3E0A     [59]     	LD A,0AH
+00FC: CD3C00   [76]     	CALL TXD
+00FF: 3E0D     [83]     	LD A,0DH
+0101: CD3C00   [100]    	CALL TXD
+                        		
+                        
+                        
+0104: 21DB0B   [110]    	LD HL,TABLEH1
+0107: 060E     [117]    	LD B,14
+0109: CDBA01   [134]    	CALL PRINT
+                        			
+                        
+                        	
+010C: 214800   [144]    	LD HL,RXD
+010F: 7C       [148]    	LD A,H
+0110: CD370A   [165]    	CALL HEXOUT
+0113: 7D       [169]    	LD A,L
+0114: CD370A   [186]    	CALL HEXOUT
+                        	
+0117: 3E0A     [193]    	LD A,0AH
+0119: CD3C00   [210]    	CALL TXD
+011C: 3E0D     [217]    	LD A,0DH
+011E: CD3C00   [234]    	CALL TXD
+                        		
+0121: 21CD0B   [244]    	LD HL,TABLEH2
+0124: 060E     [251]    	LD B,14	
+                        	
+0126: CDBA01   [268]    	CALL PRINT
+                        
+                        
+                        
+                        	
+                        	
+0129: 21E807   [278]    	LD HL,BYTEIN2
+012C: 7C       [282]    	LD A,H
+012D: CD370A   [299]    	CALL HEXOUT
+0130: 7D       [303]    	LD A,L
+0131: CD370A   [320]    	CALL HEXOUT
+                        	
+0134: 21BE0B   [330]    	LD HL,TABLEH3
+0137: 060F     [337]    	LD B,15
+0139: CDBA01   [354]    	CALL PRINT
+                        	
+013C: 21B00B   [364]    	LD HL,TABLEH4
+013F: 060E     [371]    	LD B,14
+0141: CDBA01   [388]    	CALL PRINT
+                        	
+0144: 211108   [398]    	LD HL,BYTEIN1
+0147: 7C       [402]    	LD A,H
+0148: CD370A   [419]    	CALL HEXOUT
+014B: 7D       [423]    	LD A,L
+014C: CD370A   [440]    	CALL HEXOUT
+                        
+014F: 21A60B   [450]    	LD HL,TABLEH5
+0152: 060A     [457]    	LD B,10
+0154: CDBA01   [474]    	CALL PRINT
+                        	
+0157: 21980B   [484]    	LD HL,TABLEH6
+015A: 060E     [491]    	LD B,14
+015C: CDBA01   [508]    	CALL PRINT
+                        	
+015F: 21370A   [518]    	LD HL,HEXOUT
+0162: 7C       [522]    	LD A,H
+0163: CD370A   [539]    	CALL HEXOUT
+0166: 7D       [543]    	LD A,L
+0167: CD370A   [560]    	CALL HEXOUT
+                        	
+016A: 218C0B   [570]    	LD HL,TABLEH7
+016D: 060C     [577]    	LD B,12
+016F: CDBA01   [594]    	CALL PRINT	
+                        	
+0172: 217E0B   [604]    	LD HL,TABLEH8
+0175: 060E     [611]    	LD B,14
+0177: CDBA01   [628]    	CALL PRINT
+                        	
+017A: 217200   [638]    	LD HL,MA_IN
+017D: 7C       [642]    	LD A,H
+017E: CD370A   [659]    	CALL HEXOUT
+0181: 7D       [663]    	LD A,L
+0182: CD370A   [680]    	CALL HEXOUT
+                        	
+0185: 3E0A     [687]    	LD A,0AH
+0187: CD3C00   [704]    	CALL TXD
+018A: 3E0D     [711]    	LD A,0DH
+018C: CD3C00   [728]    	CALL TXD
+                        	
+                        	
+                        	
+018F: 21700B   [738]    	LD HL,TABLEH10
+0192: 060E     [745]    	LD B,14
+0194: CDBA01   [762]    	CALL PRINT
+                        	
+0197: 21AF01   [772]    	LD HL,DE_LAY
+019A: 7C       [776]    	LD A,H
+019B: CD370A   [793]    	CALL HEXOUT
+019E: 7D       [797]    	LD A,L
+019F: CD370A   [814]    	CALL HEXOUT
+                        
+01A2: 3E0A     [821]    	LD A,0AH
+01A4: CD3C00   [838]    	CALL TXD
+01A7: 3E0D     [845]    	LD A,0DH
+01A9: CD3C00   [862]    	CALL TXD
+                        	
+                        	
+01AC: C37200   [872]    	JP MA_IN
+                        	
+                        	
+                        ;--------------DELAY 500MS---------------	
+01AF:                   DE_LAY:
+                        	
+01AF: D5       [11]     	PUSH DE
+01B0: 110080   [21]     	LD DE,08000H
+01B3:                   DISDELAY:
+01B3: 1B       [ 6]     	DEC DE
+01B4: 7A       [10]     	LD A,D
+01B5: B3       [14]     	OR E
+01B6: 20FB     [21|26]  	JR NZ,DISDELAY
+01B8: D1       [31]     	POP DE
+01B9: C9       [41]     	RET
+                        ;--------------------------------------		
+                        	
+                        ;---------PRINT SUBROUTINE-------------
+                        
+                        	
+01BA: 7E       [ 7]     PRINT:	LD A,(HL)
+01BB: CD3C00   [24]     	CALL TXD
+01BE: 23       [30]     	INC HL
+01BF: 10F9     [38|43]  	DJNZ PRINT
+01C1: C9       [48]     	RET
+                        ;--------------------------------------	
+                        
+                        	
+                        
+                        ;-------------HEXDUMP--------------------------
+                        ;HEXDUMP OF INPUTTED MEMORY- +FFH
+                        
+01C2:                   HEXDUMP:
+01C2: 3E58     [ 7]     	LD A,'X'
+01C4: CD3C00   [24]     	CALL TXD
+01C7: 3E2D     [31]     	LD A,'-'
+01C9: CD3C00   [48]     	CALL TXD 
+01CC: 3E24     [55]     	LD A, '$'
+01CE: CD3C00   [72]     	CALL TXD
+01D1: 3E3F     [79]     	LD A, '?'
+01D3: CD3C00   [96]     	CALL TXD
+01D6: 3E08     [103]    	LD A, 08H
+01D8: CD3C00   [120]    	CALL TXD ; DISPLAY 4 CHAR INPUT PROMPT
+                        	
+                        	
+                        	
+                        ;        LD HL, KEYINBUF
+                        ;	LD B,4
+                        ;DISX1:	CALL RXD
+                        ;	CP 1BH
+                        ;	JP Z, MA_IN
+                        ;	LD (HL), A
+                        ;	INC HL
+                        ;	CALL TXD
+                        ;	DJNZ DISX1	;INPUT 4 CHAR
+                        ;	CALL INTLINR	;EXTRACT ADRESS
+                        
+01DB: CDE807   [137]    	CALL BYTEIN2	;4 CHAR INPUT, RESULT IN (ADRSINP)
+                        	
+                        	
+01DE: 2A43FF   [153]    	LD HL,(ADRSINP) 	
+01E1: 110F00   [10]     DONGUY:	LD DE,000FH		;SHOW 16 LINES
+01E4:                   DONGUX:	
+01E4: 3E0D     [ 7]     	LD A,0DH		;ENTER
+01E6: CD3C00   [24]     	CALL TXD 
+01E9: 3E0A     [31]     	LD A,0AH
+01EB: CD3C00   [48]     	CALL TXD
+                        
+01EE: 7C       [52]     	LD A,H 			;PRINT ADRESS AND :
+01EF: CD370A   [69]     	CALL HEXOUT
+01F2: 7D       [73]     	LD A,L
+01F3: CD370A   [90]     	CALL HEXOUT
+01F6: 3E3A     [97]     	LD A,':'
+01F8: CD3C00   [114]    	CALL TXD
+01FB: 3E20     [121]    	LD A,' '
+01FD: CD3C00   [138]    	CALL TXD 
+0200: 3E20     [145]    	LD A,' '
+0202: CD3C00   [162]    	CALL TXD 
+                        	
+0205: 0608     [169]    	LD B,8		;FIRST 8 BYTE
+0207: 7E       [ 7]     DUMBP:	LD A,(HL)
+0208: CD370A   [24]     	CALL HEXOUT
+020B: 3E20     [31]     	LD A,' '
+020D: CD3C00   [48]     	CALL TXD 
+0210: 23       [54]     	INC HL
+0211: 10F4     [62|67]  	DJNZ DUMBP
+                        	
+0213: 3E20     [69]     	LD A,' '
+0215: CD3C00   [86]     	CALL TXD
+0218: 3E20     [93]     	LD A,' '
+021A: CD3C00   [110]    	CALL TXD
+021D: 3E20     [117]    	LD A,' '
+021F: CD3C00   [134]    	CALL TXD
+                        		
+0222: 0608     [141]    	LD B,8		;SECOND 8 BYTE
+0224: 7E       [ 7]     DUMBP2:	LD A,(HL)
+0225: CD370A   [24]     	CALL HEXOUT
+0228: 3E20     [31]     	LD A,' '
+022A: CD3C00   [48]     	CALL TXD 
+022D: 23       [54]     	INC HL
+022E: 10F4     [62|67]  	DJNZ DUMBP2
+                        
+0230: 1B       [68]     	DEC DE
+0231: 7A       [72]     	LD A,D
+0232: B3       [76]     	OR E
+0233: C2E401   [86|86]  	JP NZ, DONGUX
+                        	
+0236: CD4800   [17]     CIKIS:	CALL RXD
+0239: FE1B     [24]     	CP 01BH
+023B: CA7200   [34|34]  	JP Z,MA_IN		;ESC : EXIT TO MAIN MENU
+023E: FE0D     [41]     	CP 0DH
+0240: CAE101   [51|51]  	JP Z,DONGUY		;ENTER OR SPACE CONT. TO LISTING
+0243: FE20     [58]     	CP 020H
+0245: CAE101   [68|68]  	JP Z,DONGUY
+0248: C33602   [78]     	JP CIKIS
+                        	
+                        
+                        
+                        ;---------------efex-ASSEMBLER---v0.87beta-STARTS HERE---------------
+                        ;                                                                    |
+                        ;                      A  S  S  E  M  B  L  E  R                     |
+                        ;                                                                    |
+                        ;                       BACKSPACE WORKS IN TEXT                      |
+                        ;                     NO BACKSPACE AFTER # OR $                      |
+                        ;                         SYNTAX CHECK ADDED                         |
+                        ;                                                                    |
+                        ;--------------------------------------------------------------------
+                        ;INPUT ASSEMBLER ADRESS-------
+                        
+024B:                   ASSEMBLE:
+024B: 3E00     [ 7]     	LD A,0		
+024D: 32B0FF   [20]     	LD (OPBYTECNT),A	;OPERAND BYTE COUNT RESET
+0250: 3E00     [27]     	LD A,0
+0252: 32B2FF   [40]     	LD (DIYEZDOLAR),A	;#,$,NULL RESET AS NULL
+                        
+0255:                   ASS_ADR:
+0255: 3E41     [ 7]     	LD A,'A'       ;ASSEMBLY START ADRESS
+0257: CD3C00   [24]     	CALL TXD
+025A: 3E2D     [31]     	LD A,'-'
+025C: CD3C00   [48]     	CALL TXD 
+025F: 3E24     [55]     	LD A, '$'
+0261: CD3C00   [72]     	CALL TXD
+0264: 3E3F     [79]     	LD A, '?'
+0266: CD3C00   [96]     	CALL TXD
+0269: 3E08     [103]    	LD A, 08H
+026B: CD3C00   [120]    	CALL TXD ; DISPLAY 4 CHAR INPUT PROMPT
+                        	
+026E: CDE807   [137]    	CALL BYTEIN2
+                        	
+0271: 2A43FF   [153]    	LD HL, (ADRSINP)
+0274: 22A4FF   [169]    	LD (ASADR),HL
+                        	
+                        		
+0277: 21D303   [179]    	LD HL,TABLE_AS ;ASSEMBLER MESSAGE
+027A: 060E     [186]    	LD B,14   
+027C: CDBA01   [203]    	CALL PRINT
+                        	
+                        	
+027F: 3E0D     [210]    	LD A, 0DH
+0281: CD3C00   [227]    	CALL TXD
+0284: 3E0A     [234]    	LD A, 0AH
+0286: CD3C00   [251]    	CALL TXD
+                        	
+                        	
+                        ;---------------main assembler loop start here------------	
+                        	
+0289: 3E0A     [ 7]     AS_DON:	LD A, 0AH
+028B: CD3C00   [24]     	CALL TXD
+028E:                   AS_DON2:
+028E: 3E0D     [ 7]     	LD A, 0DH
+0290: CD3C00   [24]     	CALL TXD
+                        	
+0293: 2AA4FF   [40]     	LD HL,(ASADR)	;ASSEMBLY ADRESS
+0296: 7C       [44]     	LD A,H
+0297: CD370A   [61]     	CALL HEXOUT
+029A: 7D       [65]     	LD A,L
+029B: CD370A   [82]     	CALL HEXOUT
+                        	
+029E: 3E20     [89]     	LD A, ' '
+02A0: CD3C00   [106]    	CALL TXD
+02A3: 3E20     [113]    	LD A, ' '
+02A5: CD3C00   [130]    	CALL TXD
+                        	
+                        	
+                        
+                        
+                        	
+02A8: 010100   [140]    	LD BC,0001H
+02AB: ED43A0FF [160]    	LD (LINELENGHT),BC;     ;CLEAR LENGHT REG
+                        
+02AF: CDA803   [177]    	CALL CLRBUF         ;CLEAR INPUT BUFFERS
+02B2: 2160FF   [187]    	LD HL,COMINBUF
+02B5: 060F     [194]    	LD B,0FH
+02B7: CD4800   [17]     DIS32:	CALL RXD
+02BA: FE0D     [24]     	CP 0DH
+02BC: CAEE02   [34|34]  	JP Z,BITTI         ;ENTER BASILDIYSA BITIR
+02BF: FE1B     [41]     	CP 1BH
+02C1: CA7200   [51|51]  	JP Z,MA_IN         ;ESC BASILDIYSA CIK
+02C4: FE08     [58]     	CP 08H
+02C6: CADA02   [68|68]  	JP Z,HATALI
+                        	
+                        	
+02C9: CD3C00   [85]     	CALL TXD         ;PRINT CHAR
+                        
+02CC: FE23     [92]     	CP '#'
+02CE: CC9A03   [102|109]	CALL Z,BYTEINP1
+02D1: FE24     [109]    	CP '$'
+02D3: CCA103   [119|126]	CALL Z,BYTEINP2
+02D6: 77       [126]    	LD (HL),A
+02D7: 23       [132]    	INC HL
+02D8: 10DD     [140|145]	DJNZ DIS32  ;GET COMMAND TO BUFFER 16 CHAR  LENGHT, TILL CR
+                        	
+                        	
+02DA: 3E08     [ 7]     HATALI:	LD A,08H
+02DC: CD3C00   [24]     	CALL TXD
+02DF: 3E20     [31]     	LD A,' '
+02E1: CD3C00   [48]     	CALL TXD
+02E4: 3E08     [55]     	LD A,08H
+02E6: CD3C00   [72]     	CALL TXD
+02E9: 2B       [78]     	DEC HL
+02EA: 04       [82]     	INC B
+02EB: C3B702   [92]     	JP DIS32
+                        	
+                        ;       ---------------------------	
+02EE: 3E0F     [ 7]     BITTI: 	LD A,0FH         
+02F0: 90       [11]     	SUB B
+02F1: 32A0FF   [24]     	LD (LINELENGHT), A   ;SAVE INPUT REGISTER LENGHT TO BC
+                        		        ;TO LINELENGHT-3FA1 AND EXIT FROM INPUT
+                        			;ALL CODE TAKEN INTO INPUT REG., LENGHT IN LINELENGHT-3FA1H
+02F4: 3E00     [31]     	LD A,00H
+02F6: 32A1FF   [44]     	LD (LINELENGHT + 1), A    
+                        		
+                        		
+02F9: C3FC02   [54]     	JP INTERPRET	;JUMP TO INTERPRETER
+                        	
+                        
+                        	
+                        ;--------LINE INPUT FINISHED HERE----- 
+                        ;------------------------------------------------------------------------
+                        ;            	                                                         |
+                        ;	RESULT: Mnemonic string in COMINBUF (INPUT BUFFER)               |
+                        ;         Mnemonic lenght in LINELENGHT  (for use Register BC)           |
+                        ;        if operand=$: result in ADRSINP-FF43H FF44h                     |
+                        ;	 if operand=#: result in DATAINP-FF42                            |
+                        ;		                                                         |
+                        ;-------------------------------------------------------------------------	
+                        	
+                        		 
+                        ;---------------INTERPRETER STARTS HERE--------------------------
+                        ;Interpreter translates input buffer mnemonics to machine code
+                        ;
+                        ;            SYSTEM VARIABLES OF INTERPRETER
+                        ;
+                        ;
+                        ;FF60-FF6F  :COMMAND INPUT BUFFER
+                        ;FFA0-FFA1  :COMMAND LINE LENGHT TO BE TRANSLATED
+                        ;FF80-FF90  :CODE BUFFER----
+                        ;FFA2-FFA3  :MNEMONIC TABLE FFINDED INDEX ADRESS
+                        ;FFA4-FFA5  :ASSEMBLY ADRESS
+                        ;FFA6-FFA7  :ASSEMBLY ADRES + CODES TO WRITE MEMORY
+                        ;FFB0	    :OPERAND BYTE COUNT
+                        ;FFB2	    : # OR $ OR NULL
+                        ;FF42       :# CONTENT (DATA)
+                        ;FF43-FF44  :$ CONTENT (ADRESS)
+                        ;FFB3-FFB4  :CODE BUF. LENGHT	
+                        
+02FC:                   INTERPRET:		;ASSEMBLER INTERPRETER
+02FC: CDE103   [17]     	CALL FINDCOM	;FIND MNEMONIC FROM TABLE
+                        	
+02FF: 3E20     [24]     	LD A,' '
+0301: CD3C00   [41]     	CALL TXD
+0304: 3E20     [48]     	LD A,' '
+0306: CD3C00   [65]     	CALL TXD
+                        	
+                        	
+                        	
+0309: 1180FF   [75]     	LD DE,CODEBUF	;CODE BUFFER
+030C: 2AA2FF   [91]     	LD HL,(TABFINDAD) 	;MNEMONIC ADRESS FROM TABLE (HOLDS BYTE COUNT AT THE MOMENT)
+                        			
+                        		
+030F: 7E       [98]     	LD A,(HL)	;OPERAND COUNT
+0310: 47       [102]    	LD B,A
+0311: 0E00     [109]    	LD C,0 	; CODE COUNT RESET
+                        
+                        	
+0313: 23       [115]    	INC HL		;HL AT FIRST OPERAND ADRESS(COMMAND)
+0314: 7E       [ 7]     DISIN:	LD A,(HL) 	;TAKE COMMAND 
+0315: 12       [14]     	LD (DE),A	;WRITE TO CODE BUFFER
+0316: 23       [20]     	INC HL
+0317: 13       [26]     	INC DE
+0318: 0C       [30]     	INC C
+0319: 10F9     [38|43]  	DJNZ DISIN
+                        	
+031B: 3AB2FF   [51]     	LD A,(DIYEZDOLAR)
+031E: FE23     [58]     	CP '#'
+0320: CC8603   [68|75]  	CALL Z, DIYEZ1
+0323: FE24     [75]     	CP '$'
+0325: CC8D03   [85|92]  	CALL Z, DOLLAR1
+                        	
+0328: 79       [89]     	LD A,C
+0329: 32B3FF   [102]    	LD (CODEBUFLEN),A    ;CODE LENGHT
+                        	
+                        
+032C: 3AB2FF   [115]    	LD A,(DIYEZDOLAR)  	;JUST OUTPUT COMPOSER TO GOOD VIEW
+032F: FE00     [122]    	CP 0
+0331: C24303   [132|132]	JP NZ, UZUN
+0334: 3E20     [139]    	LD A,' '
+0336: CD3C00   [156]    	CALL TXD	
+0339: 3E20     [163]    	LD A,' '
+033B: CD3C00   [180]    	CALL TXD
+033E: 3E09     [187]    	LD A,009H
+0340: CD3C00   [204]    	CALL TXD
+                        
+0343: 3E20     [ 7]     UZUN:	LD A,' '
+0345: CD3C00   [24]     	CALL TXD
+0348: 3E09     [31]     	LD A,009H
+034A: CD3C00   [48]     	CALL TXD
+                        
+                        	
+                        		
+                        	
+                        	
+                        	
+                        	
+034D: 2180FF   [58]     	LD HL,CODEBUF
+0350: 41       [62]     	LD B,C
+0351: 3E20     [69]     	LD A,' '
+0353: CD3C00   [86]     	CALL TXD 
+0356: 3E3A     [93]     	LD A,':'
+0358: CD3C00   [110]    	CALL TXD 
+                        	
+035B: 7E       [ 7]     ISTEBU:	LD A,(HL)
+035C: CD370A   [24]     	CALL HEXOUT
+035F: 3E20     [31]     	LD A,' '
+0361: CD3C00   [48]     	CALL TXD
+0364: 23       [54]     	INC HL
+0365: 10F4     [62|67]  	DJNZ ISTEBU
+                        	
+                        	
+                        	
+                        ;------LINE ASSEMLY COMPLETED HERE 
+                        
+0367: 2AA4FF   [78]     	LD HL,(ASADR)    
+036A: 22A6FF   [94]     	LD (ASADCODE),HL	
+036D: 0600     [101]    	LD B,0
+036F: 09       [112]    	ADD HL,BC
+0370: 22A4FF   [128]    	LD (ASADR),HL
+                        	
+                        	
+                        	
+                        	
+0373: 3AB3FF   [13]     YAZIM:	LD A,(CODEBUFLEN)   	;;WRITE ASSEMBLY LINE CODES FROM CODE BUFFER TO MEMORY
+0376: 47       [17]     	LD B,A		;CODE LENGHT
+                        
+                        	
+0377: 2AA6FF   [33]     	LD HL,(ASADCODE)  ; ASSEMBLY LINE START ADRESS
+037A: 1180FF   [43]     	LD DE,CODEBUF	;CODE BUFFER START ADRESS
+037D: 1A       [ 7]     DISYAZ:	LD A,(DE)
+037E: 77       [14]     	LD (HL),A
+037F: 23       [20]     	INC HL
+0380: 13       [26]     	INC DE
+0381: 10FA     [34|39]  	DJNZ DISYAZ    ;WRITE ASSEMBLY LINE CODES TO MEMORY
+                        	
+                        	
+                        	
+                        	
+0383: C38902   [44]     	JP AS_DON	;GO TO NEXT ASSEMBLY LINE
+                        	;JP MA_IN
+                        	
+0386:                   DIYEZ1: 	
+0386: 3A42FF   [13]     	LD A,(DATAINP)	;CHANGE # CHAR TO OPERAND BYTE
+0389: 12       [20]     	LD (DE),A
+038A: 13       [26]     	INC DE
+038B: 0C       [30]     	INC C
+038C: C9       [40]     	RET
+                        	
+038D:                   DOLLAR1:
+                        	
+038D: 3A43FF   [13]      	LD A,(ADRSINP)   ;CHANGE $ CHAR TO DOUBLE OPERAND BYTE
+0390: 12       [20]     	LD (DE),A
+0391: 13       [26]     	INC DE
+0392: 0C       [30]     	INC C
+0393: 3A44FF   [43]     	LD A,(ADRSINP+1)
+0396: 12       [50]     	LD (DE),A
+0397: 13       [56]     	INC DE
+0398: 0C       [60]     	INC C
+0399: C9       [70]     	RET
+                        	
+                        	
+                        	
+                        
+                        
+039A:                   BYTEINP1:
+039A: 32B2FF   [13]     	LD (DIYEZDOLAR),A
+039D: CD1108   [30]     	CALL BYTEIN1 ;AFTER#
+03A0: C9       [40]     	RET
+                        	
+03A1:                   BYTEINP2:
+03A1: 32B2FF   [13]     	LD (DIYEZDOLAR),A
+03A4: CDE807   [30]     	CALL BYTEIN2 ;AFTER$
+03A7: C9       [40]     	RET
+                        
+                        
+                        
+03A8: 2160FF   [10]     CLRBUF:	LD HL,COMINBUF
+03AB: 060F     [17]     	LD B,0FH
+03AD: 3E00     [ 7]     DIS30:	LD A,00H
+03AF: 77       [14]     	LD (HL),A
+03B0: 23       [20]     	INC HL
+03B1: 10FA     [28|33]  	DJNZ DIS30  ;CLEAR INPUT BUFFER
+                        	
+                        	
+03B3: 2180FF   [38]     	LD HL,CODEBUF
+03B6: 060F     [45]     	LD B,0FH
+03B8: 3E00     [ 7]     DISCB:	LD A,00H
+03BA: 77       [14]     	LD (HL),A
+03BB: 23       [20]     	INC HL
+03BC: 10FA     [28|33]  	DJNZ DISCB  ;CLEAR CODE BUFFER
+                        	
+03BE: 3E00     [35]     	LD A,0
+03C0: 32A0FF   [48]     	LD (LINELENGHT),A	;CLEAR ALL COUNTER BUFFERS
+03C3: 32A1FF   [61]     	LD (LINELENGHT+1),A
+03C6: 32B0FF   [74]     	LD (OPBYTECNT),A
+03C9: 32B2FF   [87]     	LD (DIYEZDOLAR),A
+03CC: 32B3FF   [100]    	LD (CODEBUFLEN),A
+03CF: 32B4FF   [113]    	LD (CODEBUFLEN+1),A
+                        	
+                        	
+03D2: C9       [123]    	RET
+                        	
+                        	
+                        
+03D3:                   TABLE_AS:
+03D3: 0A0D              	.DB 0AH,0DH
+03D5: 41737365          	.DB 'Assembler:'
+03D9: 6D626C65          
+03DD: 723A              
+03DF: 0A0D              	.DB 0AH,0DH
+                        	
+                        
+                        ; THIS ROUTINE INSPIRED FROM NAIVE STRING MATCHING ALGORITHM!!
+                        
+03E1:                   FINDCOM:		;SEARCH UTIL OF INTERPRETER 
+03E1: F5       [11]     	PUSH AF
+03E2: E5       [22]     	PUSH HL
+03E3: D5       [33]     	PUSH DE
+03E4: C5       [44]     	PUSH BC 
+                        
+03E5: 21F70B   [54]     	LD HL,TABLECOD   ;SEARCH AND FIND MNEMONIC TABLE ADRESS INDEX
+03E8: 22A2FF   [70]     	LD (TABFINDAD),HL
+03EB: 2AA2FF   [16]     LOOPF:	LD HL,(TABFINDAD)
+03EE: 1160FF   [26]     	LD DE, COMINBUF
+03F1: ED4BA0FF [46]     	LD BC,(LINELENGHT)
+                        		
+03F5: 1A       [ 7]     LOOPC:	LD A,(DE)
+03F6: BE       [14]     	CP (HL)
+03F7: C20504   [24|24]  	JP NZ, NOTFOUND
+03FA: 23       [30]     	INC HL
+03FB: 13       [36]     	INC DE
+03FC: 0B       [42]     	DEC BC
+03FD: 78       [46]     	LD A, B
+03FE: B1       [50]     	OR C
+03FF: C2F503   [60|60]  	JP NZ,LOOPC
+                        	
+0402: C32004   [70]     	JP FOUND
+                        	
+0405:                   NOTFOUND:		;IF STRING NOT FOUND INCREASE TABLE SEARCH ADRESS
+0405: 2AA2FF   [16]     	LD HL,(TABFINDAD)	;THIS IS NAIVE STRING MATCHING ALGORITHM
+0408: 23       [22]     	INC HL
+                             ;THIS CODE ADDED FOR TABLE END CONTROL	
+                        
+0409: E5       [33]     	PUSH HL			;;TABLE END CONTROL FOR SYNTAX ERROR
+040A: D5       [44]     	PUSH DE
+                        	
+040B: 217E1F   [54]     	LD HL,CODEND
+040E: ED5BA2FF [74]     	LD DE,(TABFINDAD)
+0412: B7       [78]     	OR A     ;CLEAR CARRY FLAG
+0413: ED52     [93]     	SBC HL,DE
+0415: CA2804   [103|103]	JP Z,ENDCONTROL
+                        	
+0418: D1       [113]    	POP DE
+0419: E1       [123]    	POP HL
+                        
+                        	
+                        	
+                             ;THIS CODE ADDED FOR TABLE END CONTROL	
+041A: 22A2FF   [139]    	LD (TABFINDAD),HL
+041D: C3EB03   [149]    	JP LOOPF       ;IF NOT CONTINUE SEARCH
+                        	
+                        
+0420: 22A2FF   [16]     FOUND:	LD (TABFINDAD),HL     ;FINDED ADRESS IN TABLE
+0423: C1       [26]     	POP BC
+0424: D1       [36]     	POP DE
+0425: E1       [46]     	POP HL
+0426: F1       [56]     	POP AF
+0427: C9       [66]     	RET
+                        	
+0428:                   ENDCONTROL:		
+0428: 3E0D     [ 7]     	LD A,0DH
+042A: CD3C00   [24]     	CALL TXD
+042D: 3E0A     [31]     	LD A,0AH
+042F: CD3C00   [48]     	CALL TXD
+0432: 060E     [55]     	LD B,14
+0434: 214304   [65]     	LD HL,ERROR
+0437: 7E       [ 7]     DISERR:	LD A,(HL)
+0438: CD3C00   [24]     	CALL TXD
+043B: 23       [30]     	INC HL
+043C: 10F9     [38|43]  	DJNZ DISERR
+043E: D1       [48]     	POP DE
+043F: E1       [58]     	POP HL
+                        	
+0440: C38902   [68]     	JP AS_DON
+                        	
+0443: 53796E74          ERROR:	.DB 'Syntax '
+0447: 617820            
+044A: 6572726F          	.DB 'error !'
+044E: 722021            
+                        	
+                        ;--INTERPRETER ENDED
+                        
+                        ;---------efex-ASSEMBLER FINISHED HERE--------------------------------------
+                        
+                        
+                        
+                        ;-----------------efex DISASSEMBLER-START-HERE----------------------------------
+                        ;
+                        ;FFC0H :TOTBYTECNT   ;TOTAL BYTE COUNT OF LINE
+                        ;FFC2H :DISCODELEN   ;TABLE FINDED COMMAND BYTE LENGHT 1,2,3,OR 4..
+                        ;FFC4H :DISTOTLEN    ;COMMAND TOTAL LENGHT WITH OPERAND
+                        ;FFC6H :NULDOLNUM    ;IF THE OPERAND NULL, BYTE OR WORD(1 BYTE-2 BYTE) # OR DOLLAR
+                        ;FFD0H :DISADDR	     ;DISSASEMBLING ADRESS
+                        ;FFD2H :DISFINDAD    ;DISASEMBLER FINDED CODE ADRESS
+                        ;FFD4  :MNESTAD	     ;MNEMONIC START ADRESS IN TABLE 
+                        ;FFD6  :MNENDAD	     ;MNEMONIC END ADRESS IN TABLE
+                        ;FFDAH :MNELEN       ;MNEMONIC LENGHT
+                        ;F900H :NEXTCODE     ;NEXT CODE START ADRESS IN DISSASEMBLE SECTOR !!!!FFDC CALISMADI!!!!
+                        ;F902H :SECTORC      ;DISASEMBLING  LINE COUNT
+                        ;FFD8H :OPERAND      ;# OR $ OPERAND IN COMMAND LINE
+                        ;FFE0H :OPCNT        ;OPERAND COUNT (#,$ : 0,1 OR 2)
+                        ;3F80-3F90  :CODEBUF         ;CODE BUFFER-----				
+                        
+0451:                   DISASSEMBLER:
+FFC0:                   	TOTBYTECNT EQU 0FFC0H
+FFD0:                   	DISADDR EQU 0FFD0H
+FFD2:                   	DISFINDAD EQU 0FFD2H
+FFC2:                   	DISCODELEN EQU 0FFC2H
+FFC4:                   	DISTOTLEN EQU 0FFC4H
+FFD4:                   	MNESTAD EQU 0FFD4H
+FFD6:                   	MNENDAD EQU 0FFD6H
+FFD8:                   	OPERAND EQU 0FFD8H
+FFDA:                   	MNELEN EQU 0FFDAH
+F900:                   	NEXTCODE EQU 0F900H
+F902:                   	SECTORC EQU 0F902H
+FFE0:                   	OPCNT EQU 0FFE0H
+                        	
+                        
+                        	
+                        	
+0451: 216004   [10]     	LD HL,TABLE_DS ;DISASSEMBLER MESSAGE
+0454: 0618     [17]     	LD B,24   
+0456: 7E       [ 7]     DISDS:	LD A,(HL)
+0457: CD3C00   [24]     	CALL TXD
+045A: 23       [30]             INC HL
+045B: 10F9     [38|43]  	DJNZ DISDS
+045D: C37804   [48]     	JP CONTDS
+                        	
+0460:                   TABLE_DS:
+0460: 0A0D              	.DB 0AH,0DH
+0462: 44697361          	.DB 'Disassembly '
+0466: 7373656D          
+046A: 626C7920          
+046E: 6C697374          	.DB 'listing:'
+0472: 696E673A          
+0476: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+0478:                   CONTDS:
+0478: 3E00     [ 7]     	LD A,0
+047A: 32A0FF   [20]     	LD (LINELENGHT),A	;CLEAR ALL COUNTER BUFFERS
+047D: 32A1FF   [33]     	LD (LINELENGHT+1),A
+0480: 32B0FF   [46]     	LD (OPBYTECNT),A
+0483: 32B2FF   [59]     	LD (DIYEZDOLAR),A
+0486: 32B3FF   [72]     	LD (CODEBUFLEN),A
+0489: 32B4FF   [85]     	LD (CODEBUFLEN+1),A
+048C: 32C0FF   [98]     	LD (TOTBYTECNT),A
+048F: 32C2FF   [111]    	LD (DISCODELEN),A
+0492: 32E0FF   [124]    	LD (OPCNT),A
+0495: 3200F9   [137]    	LD (NEXTCODE),A
+0498: 3201F9   [150]    	LD (NEXTCODE +1),A
+                        	
+                        ;---Disasembling adress input---
+049B: 3E44     [ 7]     ASKDIS: LD A,'D'
+049D: CD3C00   [24]     	CALL TXD
+04A0: 3E2D     [31]     	LD A,'-'
+04A2: CD3C00   [48]     	CALL TXD 
+04A5: 3E24     [55]     	LD A, '$'
+04A7: CD3C00   [72]     	CALL TXD
+04AA: 3E3F     [79]     	LD A, '?'
+04AC: CD3C00   [96]     	CALL TXD
+04AF: 3E08     [103]    	LD A, 08H
+04B1: CD3C00   [120]    	CALL TXD ; DISPLAY 4 CHAR INPUT PROMPT
+                        	
+04B4: CDE807   [137]    	CALL BYTEIN2
+                        	
+04B7: 2A43FF   [153]    	LD HL,(ADRSINP) ; 3F43 STORES RESULT ADRESS
+04BA: 3E3A     [160]    	LD A, ':'
+04BC: CD3C00   [177]    	CALL TXD
+                        	
+04BF: 2A43FF   [193]    	LD HL,(ADRSINP)   ;GIRILEN ADRESS
+04C2: 2200F9   [209]    	LD (NEXTCODE),HL	;NEXTCODE IS INCREASE LOOP ADRESS FOR DISASSEMBLER
+                        ;----------ADRESS INPUT COMPLETED HERE---
+                        
+04C5:                   DONDISZ:
+04C5: 3E10     [ 7]     	LD A,16			;16 LINES SHOWING PER PROCESS
+04C7: 3202F9   [20]     	LD (SECTORC),A
+                        	
+04CA:                   DONDISY:
+04CA: 3E00     [ 7]     	LD A,0
+04CC: 32A0FF   [20]     	LD (LINELENGHT),A	;CLEAR ALL COUNTER BUFFERS
+04CF: 32A1FF   [33]     	LD (LINELENGHT+1),A
+04D2: 32B0FF   [46]     	LD (OPBYTECNT),A
+04D5: 32B2FF   [59]     	LD (DIYEZDOLAR),A
+04D8: 32B3FF   [72]     	LD (CODEBUFLEN),A
+04DB: 32B4FF   [85]     	LD (CODEBUFLEN+1),A
+04DE: 32C0FF   [98]     	LD (TOTBYTECNT),A
+04E1: 32C2FF   [111]    	LD (DISCODELEN),A
+04E4: 32E0FF   [124]    	LD (OPCNT),A
+                        	
+                        
+04E7:                   DONDISX:
+04E7: 2A00F9   [16]     	LD HL,(NEXTCODE)				;MAIN LOOP FOR DISASEMBLY LINES
+04EA: 22D0FF   [32]     	LD (DISADDR),HL        
+                        											
+04ED: 210100   [42]     	LD HL,1
+04F0: 22A0FF   [58]     	LD (LINELENGHT),HL
+04F3: 21F70B   [68]     	LD HL,TABLECOD
+04F6: ED5BD0FF [88]     	LD DE,(DISADDR)
+                        		
+04FA: 1A       [ 7]     DONDIS:	LD A,(DE)
+                        
+04FB: FEED     [14]     	CP 0EDH
+04FD: CA2205   [24|24]  	JP Z,AFTER		;IF AFTER ED,CB,DD,FD COMMANDS 
+0500: FECB     [31]     	CP 0CBH
+0502: CA2205   [41|41]  	JP Z,AFTER
+0505: FEDD     [48]     	CP 0DDH
+0507: CA2205   [58|58]  	JP Z,AFTER
+050A: FEFD     [65]     	CP 0FDH
+050C: CA2205   [75|75]  	JP Z,AFTER
+                        
+                        	
+                        
+                        	
+050F: BE       [82]     	CP (HL)
+0510: CA1705   [92|92]  	JP Z,CHECKINDEX     ;JP Z,FOUNDDIS
+0513: 23       [98]     	INC HL
+0514: C3FA04   [10]     DVM1:	JP DONDIS
+                        	
+                        	
+0517:                   CHECKINDEX:      ;CHECK IF 0FFH AFTER CODE?
+0517: 23       [ 6]     	INC HL 
+0518: 3EFF     [13]     	LD A,0FFH
+051A: BE       [20]     	CP (HL)
+051B: C21405   [30|30]  	JP NZ,DVM1 ;NO INDEX--->CONT TO SEARC
+051E: 2B       [36]     	DEC HL     ;INDEX FOUND, DEC HL TO COMMAND'S ADRESS
+051F: C39905   [46]     	JP FOUNDDIS
+                        		
+                        	;----AFTER DD DE,EE,FB,.. COMMANDS PROCESS START HERE---
+0522:                   AFTER: 
+                        
+                        
+0522: 210916   [10]     	LD HL,AFTERCOD   ;SEARCH AND FIND MNEMONIC TABLE ADRESS INDEX
+0525: 22A2FF   [26]     	LD (TABFINDAD),HL
+0528: 2AA2FF   [16]     LOOPFD:	LD HL,(TABFINDAD)
+052B: ED5BD0FF [36]     	LD DE, (DISADDR)
+052F: 010200   [46]     	LD BC,2         ;(LINELENGHT)
+                        		
+0532: 1A       [ 7]     LOOPCD:	LD A,(DE)
+0533: BE       [14]     	CP (HL)
+0534: C24205   [24|24]  	JP NZ, NOTFOUNDD
+0537: 23       [30]     	INC HL
+0538: 13       [36]     	INC DE
+0539: 0B       [42]     	DEC BC
+053A: 78       [46]     	LD A, B
+053B: B1       [50]     	OR C
+053C: C23205   [60|60]  	JP NZ,LOOPCD
+                        	
+053F: C39305   [70]     	JP FOUNDD
+                        	
+0542:                   NOTFOUNDD:		;IF STRING NOT FOUND INCREASE TABLE SEARCH ADRESS
+0542: 2AA2FF   [16]     	LD HL,(TABFINDAD)	;THIS IS NAIVE STRING MATCHING ALGORITHM
+0545: 23       [22]     	INC HL
+                        	
+                             ;THIS CODE ADDED FOR TABLE END CONTROL	
+                        
+0546: E5       [33]     	PUSH HL			;;TABLE END CONTROL FOR SYNTAX ERROR
+0547: D5       [44]     	PUSH DE
+                        	
+0548: 217E1F   [54]     	LD HL,CODEND
+054B: ED5BA2FF [74]     	LD DE,(TABFINDAD)
+054F: B7       [78]     	OR A     ;CLEAR CARRY FLAG
+0550: ED52     [93]     	SBC HL,DE
+0552: CA5D05   [103|103]	JP Z,ENDCONTROLD
+                        	
+0555: D1       [113]    	POP DE
+0556: E1       [123]    	POP HL
+                        
+                        	
+                        	
+                             ;THIS CODE ADDED FOR TABLE END CONTROL	
+                        	
+0557: 22A2FF   [139]    	LD (TABFINDAD),HL
+055A: C32805   [149]    	JP LOOPFD       ;IF NOT CONTINUE SEARCH
+                        	
+055D:                   ENDCONTROLD:		;UNKNOWN CODE ROUTINE; PRINT *** AND GOTO NEXT ADRESS
+                        
+055D: 3E0A     [ 7]     	LD A,0AH
+055F: CD3C00   [24]     	CALL TXD
+0562: 3E0D     [31]     	LD A,0DH
+0564: CD3C00   [48]     	CALL TXD
+                        
+0567: 2AD0FF   [64]     	LD HL,(DISADDR)
+056A: 7C       [68]     	LD A,H
+056B: CD370A   [85]     	CALL HEXOUT
+056E: 7D       [89]     	LD A,L
+056F: CD370A   [106]    	CALL HEXOUT
+0572: 3E20     [113]    	LD A,' '
+0574: CD3C00   [130]    	CALL TXD
+0577: 3E20     [137]    	LD A,' '
+0579: CD3C00   [154]    	CALL TXD		
+057C: 3E2A     [161]    	LD A,'*'
+057E: CD3C00   [178]    	CALL TXD
+0581: 3E2A     [185]    	LD A,'*'
+0583: CD3C00   [202]    	CALL TXD
+0586: 3E2A     [209]    	LD A,'*'
+0588: CD3C00   [226]    	CALL TXD
+                        
+                        	
+058B: 23       [232]    	INC HL
+058C: 23       [238]    	INC HL
+058D: 2200F9   [254]    	LD (NEXTCODE),HL
+0590: C3E704   [264]    	JP DONDISX
+                        	
+                        
+                        	
+                        
+0593: 2AA2FF   [16]     FOUNDD:	LD HL,(TABFINDAD)
+                        	
+0596: 22D2FF   [32]     	LD (DISFINDAD),HL
+                        
+                        	
+                        	
+                        	
+                        
+                        ;------AFTER DD DE EE FB.. COMMANDS PROCESS END HERE
+                        
+                        	
+0599:                   FOUNDDIS:		;ANYWAY (AFTER OR SINGLE) COMMAND FOUND	
+                        	;LD  HL,(TABFINDAD)
+                        
+0599: 22D2FF   [16]     	LD  (DISFINDAD),HL
+                        
+059C: 3E0A     [23]     	LD A,0AH
+059E: CD3C00   [40]     	CALL TXD
+05A1: 3E0D     [47]     	LD A,0DH
+05A3: CD3C00   [64]     	CALL TXD
+                        	
+                        
+05A6: 2AD2FF   [80]     	LD HL,(DISFINDAD) 	;FINDED CODE FIRST BYTE
+05A9: 2B       [86]     	DEC HL
+05AA: 7E       [93]     	LD A,(HL)
+05AB: 32C2FF   [106]    	LD (DISCODELEN),A   	;CODE BYTE LENGHT
+05AE: 2B       [112]    	DEC HL
+05AF: 22D6FF   [128]    	LD (MNENDAD),HL		;MNEMONIC END ADRESS
+                        	
+05B2: 2B       [ 6]     DIS45:	DEC HL
+05B3: 7E       [13]     	LD A,(HL)
+05B4: FE5F     [20]     	CP '_'
+05B6: 20FA     [27|32]  	JR NZ, DIS45
+05B8: 23       [33]     	INC HL
+05B9: 22D4FF   [49]     	LD (MNESTAD),HL		;MNEMONIC START ADRESS IN TABLE
+05BC: 3AC2FF   [62]     	LD A,(DISCODELEN)
+05BF: 47       [66]     	LD B,A
+05C0: 2AD0FF   [82]     	LD HL,(DISADDR)
+05C3: 23       [ 6]     DIS51:	INC HL
+05C4: 10FD     [14|19]  	DJNZ DIS51
+                        	
+                        	
+                        					;HL HOLDS OPERAND FIRST BYTE HERE
+05C6: 22D8FF   [30]     	LD (OPERAND),HL	 ;OPERAND1: IF #; FIRST BYTE, IF $; LOW AND HIGH BYTES IN ORDER
+                        	
+                        		
+                        	
+05C9:                   DISPROC:		;WRITES DISASEMBLED CODE TO CODE BUFFER
+                        
+05C9: 3E0D     [ 7]     	LD A,0DH
+05CB: CD3C00   [24]     	CALL TXD
+05CE: 3E0D     [31]     	LD A,0DH
+05D0: CD3C00   [48]     	CALL TXD
+                        	
+                        	; BURADA MNEMONIC LENGHT IN HESAPLANMASI GEREKIYOR
+05D3: 2AD4FF   [64]     	LD HL,(MNESTAD)
+05D6: 54       [68]     	LD D,H
+05D7: 5D       [72]     	LD E,L
+05D8: 2AD6FF   [88]     	LD HL,(MNENDAD)
+05DB: B7       [92]     	OR A
+05DC: ED52     [107]    	SBC HL,DE
+05DE: 22DAFF   [123]    	LD (MNELEN),HL
+                        	
+05E1: 3ADAFF   [136]    	LD A,(MNELEN)	;AT LAST ITS 1 BYTE AND STORED IN L
+                        	
+                        
+05E4: 2AD0FF   [152]    	LD HL,(DISADDR)
+05E7: 7C       [156]    	LD A,H
+05E8: CD370A   [173]    	CALL HEXOUT
+05EB: 7D       [177]    	LD A,L
+05EC: CD370A   [194]    	CALL HEXOUT
+05EF: 3E20     [201]    	LD A,' '
+05F1: CD3C00   [218]    	CALL TXD
+05F4: 3E20     [225]    	LD A,' '
+05F6: CD3C00   [242]    	CALL TXD
+                        		
+                        	
+                        	
+05F9: 3ADAFF   [255]    	LD A,(MNELEN)	;AT LAST ITS 1 BYTE AND STORED IN L
+05FC: 2AD4FF   [271]    	LD HL,(MNESTAD)
+05FF: 47       [275]    	LD B,A	;(MNELEN)
+0600: 04       [279]    	INC B
+0601: 7E       [ 7]     DIS46:	LD A,(HL)
+0602: FE23     [14]     	CP '#'
+0604: CA4006   [24|24]  	JP Z,DISDIYEZ
+0607: FE24     [31]     	CP '$'
+0609: CA5606   [41|41]  	JP Z,DISDOLAR
+060C: CD3C00   [58]     	CALL TXD
+060F: 23       [ 6]     DIS50:	INC HL
+0610: 10EF     [14|19]  	DJNZ DIS46
+                        	
+                        
+                        	
+                        
+                        
+0612: 2A00F9   [30]     	LD HL,(NEXTCODE)
+0615: 3AC2FF   [43]     	LD A,(DISCODELEN) ;CODE LENGHT
+0618: 47       [47]     	LD B,A
+0619: 3AE0FF   [60]     	LD A,(OPCNT)	;OPERAND COUND
+061C: 80       [64]     	ADD A,B
+061D: 110000   [74]     	LD DE,0
+0620: 5F       [78]     	LD E,A
+0621: 19       [89]     	ADD HL,DE
+0622: 2200F9   [105]    	LD (NEXTCODE),HL
+                        	
+                        	
+                        	
+0625: 3A02F9   [118]    	LD A,(SECTORC)
+0628: 3D       [122]    	DEC A
+0629: CA3206   [132|132]	JP Z,DONE    	;JP Z,MA_IN
+062C: 3202F9   [145]    	LD (SECTORC),A
+                        
+062F: C3CA04   [155]    	JP DONDISY
+                        	;JP MA_IN		;EXIT POINT FROM DISASSEMBLER
+                        	
+0632: CD4800   [17]     DONE:	CALL RXD
+0635: FE1B     [24]     	CP 01BH
+0637: CA7200   [34|34]  	JP Z,MA_IN
+063A: C3C504   [44]     	JP DONDISZ
+063D: C33206   [54]     	JP DONE	
+                        
+                        		
+                        	
+0640:                   DISDIYEZ:
+0640: 3E01     [ 7]     	LD A,1
+0642: 32E0FF   [20]     	LD (OPCNT),A
+0645: 3E23     [27]     	LD A,'#'
+0647: CD3C00   [44]     	CALL TXD
+064A: E5       [55]     	PUSH HL
+064B: 2AD8FF   [71]     	LD HL,(OPERAND)
+064E: 7E       [78]     	LD A,(HL)
+064F: CD370A   [95]     	CALL HEXOUT
+0652: E1       [105]    	POP HL
+0653: C30F06   [115]    	JP DIS50
+                        	
+0656:                   DISDOLAR:
+0656: 3E02     [ 7]     	LD A,2
+0658: 32E0FF   [20]     	LD (OPCNT),A
+065B: 3E24     [27]     	LD A,'$'
+065D: CD3C00   [44]     	CALL TXD
+0660: E5       [55]     	PUSH HL
+0661: 2AD8FF   [71]     	LD HL,(OPERAND)
+0664: 23       [77]     	INC HL
+0665: 7E       [84]     	LD A,(HL)
+0666: CD370A   [101]    	CALL HEXOUT
+0669: 2B       [107]    	DEC HL
+066A: 7E       [114]    	LD A,(HL)
+066B: CD370A   [131]    	CALL HEXOUT
+066E: E1       [141]    	POP HL
+066F: C30F06   [151]    	JP DIS50
+                        	
+                        				
+                        
+                        ;--------------DISASSEMBLER FINISHED HERE
+                        	
+                        
+                        
+                        ;------------------------------------MOVE---------------------------------
+                        
+0672:                   MOVE: 		
+                        
+                        
+0672: CD9406   [17]     	CALL MOVE_SR     ;HL HOLDS SOURCE
+0675: E5       [28]     	PUSH HL
+0676: CDA306   [45]     	CALL MOVE_DT     ;DE HOLDS TARGET
+0679: D5       [56]     	PUSH DE
+067A: CDB306   [73]     	CALL MOVE_LNT    ;BC HOLDS LENGHT
+                        	
+067D: D1       [83]     	POP DE
+067E: E1       [93]     	POP HL
+                        	
+                        	
+067F: 7E       [ 7]     LOP15:	LD A,(HL)      ;BLOCK COPY SUBROUTINE
+0680: 12       [14]     	LD (DE),A
+0681: 23       [20]     	INC HL
+0682: 13       [26]     	INC DE
+0683: 0B       [32]     	DEC BC
+0684: 78       [36]     	LD A,B
+0685: B1       [40]     	OR C
+0686: C27F06   [50|50]  	JP NZ, LOP15
+                        	
+0689: 21F306   [60]     	LD HL, TABLE14   ;MOVE COMPLETE MSG
+068C: 0613     [67]     	LD B,19   
+068E: CDBA01   [84]     	CALL PRINT
+                        
+                        	
+0691: C37200   [94]     	JP MA_IN
+                        	
+                        	
+0694:                   MOVE_SR:
+0694: 21C406   [10]     	LD HL,TBLMVSR	;  DISPLAY 4 CHAR INPUT PROMPT
+0697: 0611     [17]     	LD B,17
+0699: CDBA01   [34]     	CALL PRINT
+069C: CDE807   [51]     	CALL BYTEIN2
+069F: 2A43FF   [67]     	LD HL,(ADRSINP) ;HL HOLDS SOURCE ADRESS
+06A2: C9       [77]     	RET
+                        
+                        
+06A3:                   MOVE_DT:
+06A3: 21D506   [10]     	LD HL,TBLMVDT
+06A6: 0612     [17]     	LD B,18
+06A8: CDBA01   [34]     	CALL PRINT
+06AB: CDE807   [51]     	CALL BYTEIN2	;2 BYTE INPUT
+06AE: 2A43FF   [67]     	LD HL, (ADRSINP)
+06B1: EB       [71]     	EX DE,HL     ;DE HOLDS TARGET ADRESS
+06B2: C9       [81]     	RET
+                        	
+                        	
+06B3:                   MOVE_LNT:
+06B3: 21E706   [10]     	LD HL,TBLMVLN
+06B6: 060C     [17]     	LD B,12
+06B8: CDBA01   [34]     	CALL PRINT
+06BB: CDE807   [51]     	CALL BYTEIN2	;2 BYTE INPUT
+06BE: 2A43FF   [67]     	LD HL, (ADRSINP)  
+06C1: 44       [71]     	LD B,H
+06C2: 4D       [75]     	LD C,L          ;BC HOLDS BLOCK LENGHT 
+06C3: C9       [85]     	RET
+                        
+06C4:                   TBLMVSR:
+06C4: 0A0D              	.DB 0AH,0DH
+06C6: 4D6F7665          	.DB 'Move Source '
+06CA: 20536F75          
+06CE: 72636520          
+06D2: 243F08            	.DB '$?',08H
+                        
+                        	
+06D5:                   TBLMVDT:
+06D5: 2020              	.DB 020H,020H
+06D7: 44657374          	.DB 'Destination  '
+06DB: 696E6174          
+06DF: 696F6E20          
+06E3: 20                
+06E4: 243F08            	.DB '$?',08H
+                        	
+06E7:                   TBLMVLN:
+06E7: 2020              	.DB 020H,020H
+06E9: 4C656E67          	.DB 'Lenght '
+06ED: 687420            
+06F0: 243F08            	.DB '$?',08H
+                        
+06F3:                   TABLE14:
+06F3: 0A0D              	.DB 0AH,0DH 
+06F5: 4D6F7665          	.DB 'Move '
+06F9: 20                
+06FA: 636F6D70          	.DB 'complete !'
+06FE: 6C657465          
+0702: 2021              
+0704: 0A0D              	.DB 0AH,0DH
+                        	
+                        
+                        ;--------------MOVE END
+                        
+                        ;------------------------------------FILL---------------------------------
+                        
+0706:                   FILL: 		
+                        
+                        
+0706: CD2707   [17]     	CALL FILL_SR     ;HL HOLDS START ADR
+0709: E5       [28]     	PUSH HL
+070A: CD3607   [45]     	CALL FILL_DT     ;DE HOLDS LENGHT
+070D: D5       [56]     	PUSH DE
+070E: CD4607   [73]     	CALL FILL_BYTE
+                        		
+0711: D1       [83]     	POP DE
+0712: E1       [93]     	POP HL
+                        	
+                        	
+0713: 79       [ 4]     LOP15F:	LD A,C	;FILL SUBROUTINE
+0714: 77       [11]     	LD (HL),A      
+0715: 23       [17]     	INC HL
+0716: 1B       [23]     	DEC DE
+0717: 7A       [27]     	LD A,D
+0718: B3       [31]     	OR E
+0719: C21307   [41|41]  	JP NZ, LOP15F
+                        	
+071C: 218B07   [51]     	LD HL, TABLE14F   ;MOVE COMPLETE MSG
+071F: 0613     [58]     	LD B,19   
+0721: CDBA01   [75]     	CALL PRINT
+                        
+                        	
+0724: C37200   [85]     	JP MA_IN
+                        	
+                        	
+0727:                   FILL_SR:
+0727: 215607   [10]     	LD HL,TBLFLSR	;  DISPLAY 4 CHAR INPUT PROMPT
+072A: 0611     [17]     	LD B,17
+072C: CDBA01   [34]     	CALL PRINT
+072F: CDE807   [51]     	CALL BYTEIN2
+0732: 2A43FF   [67]     	LD HL,(ADRSINP) ;HL HOLDS SOURCE ADRESS
+0735: C9       [77]     	RET
+                        
+                        
+0736:                   FILL_DT:
+0736: 216707   [10]     	LD HL,TBLFLDT
+0739: 0612     [17]     	LD B,18
+073B: CDBA01   [34]     	CALL PRINT
+073E: CDE807   [51]     	CALL BYTEIN2	;2 BYTE INPUT
+0741: 2A43FF   [67]     	LD HL, (ADRSINP)
+0744: EB       [71]     	EX DE,HL     ;DE HOLDS TARGET ADRESS
+0745: C9       [81]     	RET
+                        	
+0746:                   FILL_BYTE:
+0746: 217907   [10]     	LD HL,TBLFLBY
+0749: 0612     [17]     	LD B,18
+074B: CDBA01   [34]     	CALL PRINT
+074E: CD1108   [51]     	CALL BYTEIN1	;1 BYTE INPUT
+0751: 3A42FF   [64]     	LD A, (DATAINP) ;C HOLDS VALUE TO FILL WITH
+0754: 4F       [68]     	LD C,A
+0755: C9       [78]     	RET
+                        
+                        
+0756:                   TBLFLSR:
+0756: 0A0D              	.DB 0AH,0DH      ;
+0758: 53746172          	.DB 'Start adr. :'
+075C: 74206164          
+0760: 722E203A          
+0764: 243F08            	.DB '$?',08H
+                        
+                        	
+0767:                   TBLFLDT:
+0767: 2020              	.DB 020H,020H     ;
+0769: 4C656E67          	.DB 'Lenght       '
+076D: 68742020          
+0771: 20202020          
+0775: 20                
+0776: 243F08            	.DB '$?',08H
+                        	
+0779:                   TBLFLBY:
+0779: 2020              	.DB 020H,020H     ;
+077B: 46696C6C          	.DB 'Fill with    '
+077F: 20776974          
+0783: 68202020          
+0787: 20                
+0788: 233F08            	.DB '#?',08H
+                        	
+                        
+                        
+078B:                   TABLE14F:
+078B: 0A0D              	.DB 0AH,0DH 
+078D: 46696C6C          	.DB 'Fill '
+0791: 20                
+0792: 636F6D70          	.DB 'complete !'
+0796: 6C657465          
+079A: 2021              
+079C: 0A0D              	.DB 0AH,0DH
+                        	
+                        
+                        ;--------------FILL END
+                        
+                        
+                        	
+                        ;-----------------SAVE-----------------------
+                        ;HL: START ADRESS, DE:END ADRESS TO SAVE	
+                        
+079E:                   SAVEX: 		
+                        
+                        
+079E: CDAC07   [17]     	CALL SAVE_ADR1
+07A1: E5       [28]     	PUSH HL
+                        	
+07A2: CDBB07   [45]     	CALL SAVE_ADR2
+07A5: E1       [55]     	POP HL
+                        	
+07A6: CDB909   [72]            	CALL INTSAVE
+07A9: C37200   [82]            	JP MA_IN
+                        	
+                        	
+                        
+                        	
+                        
+                        
+07AC:                   SAVE_ADR1:
+07AC: 21CE07   [10]     	LD HL,TBLSV1
+07AF: 060B     [17]     	LD B,11
+07B1: CDBA01   [34]     	CALL PRINT
+                        
+07B4: CDE807   [51]     	CALL BYTEIN2
+07B7: 2A43FF   [67]     	LD HL,(ADRSINP)
+07BA: C9       [77]     	RET
+                        
+07BB:                   SAVE_ADR2:
+07BB: 21DB07   [10]     	LD HL,TBLSV2
+07BE: 060B     [17]     	LD B,11
+07C0: CDBA01   [34]     	CALL PRINT
+                        	
+07C3: CDE807   [51]     	CALL BYTEIN2
+07C6: 110000   [61]     	LD DE,0
+07C9: 2A43FF   [77]     	LD HL, (ADRSINP)
+07CC: EB       [81]     	EX DE,HL     ;DE HOLDS END ADRESS
+07CD: C9       [91]     	RET
+                        	
+07CE: 0A0D              TBLSV1:	.DB 0AH,0DH
+07D0: 532D5374          	.DB 'S-Start '
+07D4: 61727420          
+07D8: 243F08            	.DB '$?',08H
+                        	
+07DB: 0A0D              TBLSV2:	.DB 0AH,0DH
+07DD: 532D456E          	.DB 'S-End   '
+07E1: 64202020          
+07E5: 243F08            	.DB '$?',08H
+                        	
+                        ;-------------save end----------------
+                        
+                        ;------------------INPUT--------------------------------
+                        ;INPUT DONT CHANGES ANY REGISTER!!!
+                        ;1 BYTE RESULT AT: DATAINP
+                        ;2 BYTE RESULT AT: ADRSINP-3F44H
+                        
+                        
+07E8:                   BYTEIN2:
+07E8: F5       [11]     	PUSH AF
+07E9: E5       [22]     	PUSH HL
+07EA: C5       [33]     	PUSH BC
+07EB: D5       [44]     	PUSH DE 
+07EC: 2120FF   [54]      	LD HL, KEYINBUF  ;4 CHAR ADRESS INPUT
+07EF: 0604     [61]     	LD B,4
+07F1: CD4800   [17]     DIS25:	CALL RXD
+07F4: FE1B     [24]     	CP 1BH
+07F6: CA7200   [34|34]  	JP Z, MA_IN
+07F9: C35508   [44]     	JP CHECKHEX    ;CHECK IF A VALID HEX CHAR
+07FC:                   HEXCON2:
+07FC: 77       [ 7]     	LD (HL), A
+07FD: 23       [13]     	INC HL
+07FE: CD3C00   [30]     	CALL TXD  ;PRINT NIBBLE
+0801: 10EE     [38|43]  	DJNZ DIS25  ;GET 4 NIBBLE FROM KEYINBUF TO 3F23H
+0803: CD0709   [55]     	CALL INTLINR  ;  
+0806: 2A40FF   [71]     	LD HL,(KEYINRES)
+0809: 2243FF   [87]     	LD (ADRSINP),HL ; TWO BYTES ADRESS AT 3F43(High), AND 3F44(Low)
+080C: D1       [97]     	POP DE 
+080D: C1       [107]    	POP BC
+080E: E1       [117]    	POP HL
+080F: F1       [127]    	POP AF
+0810: C9       [137]    	RET
+                        		
+                        	
+0811:                   BYTEIN1:
+0811: F5       [11]     	PUSH AF
+0812: E5       [22]     	PUSH HL
+0813: C5       [33]     	PUSH BC
+0814: D5       [44]     	PUSH DE
+0815: 2122FF   [54]     	LD HL, KEYINBUF + 2 ;2 CHAR DATA INPUT
+0818: 0602     [61]     	LD B,2
+081A: CD4800   [17]     DIS26:	CALL RXD
+081D: FE1B     [24]     	CP 1BH
+081F: CA7200   [34|34]  	JP Z, MA_IN
+0822: C33A08   [44]     	JP CHECKHEX2
+                        	
+0825:                   HEXCON3:
+                        
+0825: 77       [ 7]     	LD (HL), A
+0826: 23       [13]     	INC HL
+0827: CD3C00   [30]     	CALL TXD   ;PRINT NIBBLE
+082A: 10EE     [38|43]  	DJNZ DIS26
+082C: CD1109   [55]     	CALL INLIN2  
+082F: 3A40FF   [68]     	LD A,(KEYINRES)
+0832: 3242FF   [81]     	LD (DATAINP),A ;1 BYTE INPUT: RESULT IN 3F42
+                        
+0835: D1       [91]     	POP DE 
+0836: C1       [101]    	POP BC
+0837: E1       [111]    	POP HL
+0838: F1       [121]    	POP AF
+0839: C9       [131]    	RET
+                        	
+                        	
+                        ;---------------------------------	
+                        ;-------------------------1 BYTE CHECK IF HEX------	
+083A:                   CHECKHEX2:	;CHECK IF INPUT IS A REAL HEX VALUE FOR 1 BYTE INPUT
+083A: E5       [11]     	PUSH HL
+083B: F5       [22]     	PUSH AF
+083C: C5       [33]     	PUSH BC
+083D: 21630A   [43]     	LD HL, TABLEX   ;HEX CHAR TABLE
+0840: 0610     [50]     	LD B,16
+0842:                   DONHEXX2:
+0842: BE       [ 7]     	CP (HL)
+0843: CA4F08   [17|17]  	JP Z,OKHEX2	;FINDED A VALID HEX CHAR, RETURN TO CONTINUE
+0846: 23       [23]     	INC HL
+0847: 10F9     [31|36]  	DJNZ DONHEXX2
+                        	
+0849: C1       [10]     NOTHEX2: POP BC
+084A: F1       [20]     	POP AF
+084B: E1       [30]     	POP HL
+084C: C31A08   [40]     	JP DIS26
+                        	
+                        	
+084F:                   OKHEX2:
+084F: C1       [10]      	POP BC
+0850: F1       [20]     	POP AF
+0851: E1       [30]     	POP HL
+0852: C32508   [40]     	JP HEXCON3	;CONTINUE TO WRITE INPUT PROCESS
+                        ;--1 BYTE CHECK FINISHED
+                        	
+0855:                   CHECKHEX:	;CHECK IF INPUT IS A REAL HEX VALUE FOR 2 BYTE INPUT
+0855: E5       [11]     	PUSH HL
+0856: F5       [22]     	PUSH AF
+0857: C5       [33]     	PUSH BC
+0858: 21630A   [43]     	LD HL, TABLEX   ;HEX CHAR TABLE
+085B: 0610     [50]     	LD B,16
+085D:                   DONHEXX:
+085D: BE       [ 7]     	CP (HL)
+085E: CA6A08   [17|17]  	JP Z,OKHEX	;FINDED A VALID HEX CHAR, RETURN TO CONTINUE
+0861: 23       [23]     	INC HL
+0862: 10F9     [31|36]  	DJNZ DONHEXX
+                        	
+0864: C1       [10]     NOTHEX: POP BC
+0865: F1       [20]     	POP AF
+0866: E1       [30]     	POP HL
+0867: C3F107   [40]     	JP DIS25
+                        	
+                        	
+086A: C1       [10]     OKHEX: 	POP BC
+086B: F1       [20]     	POP AF
+086C: E1       [30]     	POP HL
+086D: C3FC07   [40]     	JP HEXCON2	;CONTINUE TO WRITE INPUT PROCESS
+                        ;--2 BYTE CHECK FINISHED
+                        	
+                        	
+                        	
+                        	
+                        ;--------------------EDIT------------------------------
+                        	
+0870: 21D908   [10]     EDIT:  	LD HL,TABLEDIT 	;EDIT MESSAGE
+0873: 060E     [17]     	LD B,14
+0875: CDBA01   [34]     	CALL PRINT
+                        	
+                        		
+                        	
+0878: CDE807   [51]     	CALL BYTEIN2   ;GET ADRESS TO EDIT
+087B: 3E0A     [58]     	LD A,0AH
+087D: CD3C00   [75]     	CALL TXD
+0880: 3E0D     [82]     	LD A,0DH
+0882: CD3C00   [99]     	CALL TXD
+0885: 2A43FF   [115]    	LD HL,(ADRSINP)
+0888: 2206F9   [131]    	LD (EDITADR),HL
+                        
+088B:                   DONEDIT:
+088B: 3E0A     [ 7]     	LD A,0AH
+088D: CD3C00   [24]     	CALL TXD
+0890: 3E0D     [31]     	LD A,0DH
+0892: CD3C00   [48]     	CALL TXD
+0895: 3E45     [55]     	LD A,'E'
+0897: CD3C00   [72]     	CALL TXD
+089A: 3E2D     [79]     	LD A,'-'
+089C: CD3C00   [96]     	CALL TXD
+                        
+                        
+                        	
+089F: 2A06F9   [112]    	LD HL,(EDITADR)	;PRINT INPUT ADRESS
+08A2: 7C       [116]    	LD A,H
+08A3: CD370A   [133]    	CALL HEXOUT 	
+08A6: 7D       [137]    	LD A,L
+08A7: CD370A   [154]    	CALL HEXOUT
+                        	
+08AA: 3E3A     [161]    	LD A,':'
+08AC: CD3C00   [178]    	CALL TXD
+08AF: 3E20     [185]    	LD A,' '
+08B1: CD3C00   [202]    	CALL TXD
+                        	
+08B4: 7E       [209]    	LD A,(HL)
+08B5: CD370A   [226]    	CALL HEXOUT  	;PRINT EDITING ADRESS CONTENT
+                        	 
+08B8: 3E08     [233]    	LD A,08H
+08BA: CD3C00   [250]    	CALL TXD
+08BD: 3E08     [257]    	LD A,08H
+08BF: CD3C00   [274]    	CALL TXD	;CURSOR 2 CHAR BACK
+                        	
+                        
+                        	
+08C2: CD1108   [291]    	CALL BYTEIN1
+08C5: CDAF01   [308]    	CALL DE_LAY
+                        	
+08C8: 3A42FF   [321]    	LD A,(DATAINP)
+08CB: 2A06F9   [337]    	LD HL,(EDITADR)
+08CE: 77       [344]    	LD (HL),A
+                        	
+08CF:                   EDITNEXT:	
+08CF: 23       [ 6]     	INC HL
+08D0: 2206F9   [22]     	LD (EDITADR),HL
+08D3: C38B08   [32]     	JP DONEDIT
+                        	
+                         	
+                        	
+08D6: C3CF08   [42]     	JP EDITNEXT	
+                        	
+                        	
+                        	
+                        		
+                        
+                        
+                        
+                        		
+                        		
+08D9:                   TABLEDIT:
+08D9: 45646974          	.DB 'Edit memory :'
+08DD: 206D656D          
+08E1: 6F727920          
+08E5: 3A                
+08E6: 24                	.DB '$'	  
+                        
+                        
+                        ;------------------GO TO ADRESS-(RUN)----------------------
+                        
+                        	
+                        	
+08E7:                   RUN_ADR:
+08E7: 3E47     [ 7]     	LD A,'G'
+08E9: CD3C00   [24]     	CALL TXD
+08EC: 3E2D     [31]     	LD A,'-'
+08EE: CD3C00   [48]     	CALL TXD 
+08F1: 3E24     [55]     	LD A, '$'
+08F3: CD3C00   [72]     	CALL TXD
+08F6: 3E3F     [79]     	LD A, '?'
+08F8: CD3C00   [96]     	CALL TXD
+08FB: 3E08     [103]    	LD A, 08H
+08FD: CD3C00   [120]    	CALL TXD ; DISPLAY 4 CHAR INPUT PROMPT
+0900: CDE807   [137]    	CALL BYTEIN2
+0903: 2A43FF   [153]    	LD HL, (ADRSINP)
+0906: E9       [157]    	JP (HL)
+                        	
+                        	
+                        
+                        ;----------------INPUT HEX TO BYTE CONVERTER 2 BYTE OR 1 BYTE---------
+0907:                   INTLINR:                   ;4 NIBBLE  INPUT   
+0907: 211FFF   [10]     	LD HL, KEYINBUF -1 ; 
+090A: 7E       [17]     	LD A,(HL)
+090B: CD1C09   [34]     	CALL BYTERDR 
+090E: 3241FF   [47]     	LD (KEYINRES + 1),A 
+                        	
+0911: 2121FF   [10]     INLIN2:	LD HL, KEYINBUF + 1       ;2 NIBBLE INPUT
+0914: 7E       [17]     	LD A,(HL)
+0915: CD1C09   [34]     	CALL BYTERDR 
+0918: 3240FF   [47]     	LD (KEYINRES),A 
+091B: C9       [57]     	RET
+                        	
+                        
+091C:                   BYTERDR:
+                        		
+091C: 1600     [ 7]     	LD	D,000h		;Set up   ;	* Get 2 ASCII chrs as hex byte	*
+091E: CD2609   [24]     	CALL	HEXCONR		;Get byte and convert to hex
+0921: 87       [28]     	ADD	A,A		;First nibble so
+0922: 87       [32]     	ADD	A,A		;multiply by 16
+0923: 87       [36]     	ADD	A,A		;
+0924: 87       [40]     	ADD	A,A		;
+0925: 57       [44]     	LD	D,A		;Save hi nibble in D
+0926:                   HEXCONR:
+                        	
+0926: 23       [ 6]     	INC HL                ;HL:FF21
+                        	
+0927: 7E       [13]     	LD A, (HL)
+                        		
+                        	;CALL	RXD		;Get next chr
+0928: D630     [20]     	SUB	030h		;Makes '0'-'9' equal 0-9
+092A: FE0A     [27]     	CP	00Ah		;Is it 0-9 ?
+092C: 3802     [34|39]  	JR	C,NALPHAR	;If so miss next bit
+092E: D607     [41]     	SUB	007h		;Else convert alpha
+0930:                   NALPHAR:	
+0930: B2       [ 4]     	OR	D		;Add hi nibble back
+0931: C9       [14]     	RET			;RESULT STORED IN A REGISTER!
+                        
+                        
+                        
+                        ;---------------LOAD HEX FILE ROUTINE
+                        
+0932:                   LOADERZ:
+                        	
+                        	
+0932: 21ED0A   [10]     	LD HL,TABLE25         ;LOADING.. MSG
+0935: 060F     [17]     	LD B,15   ; DECIMAL IF NOT H AT THE END
+0937: CDBA01   [34]     	CALL PRINT	
+                        	
+093A: CD6709   [51]     	CALL INTLIN1
+                        	
+                        	
+093D:                   LOAD_ED:	              ; FILE LOADED MESAGE
+093D: 21DE0A   [10]     	LD HL,TABLE2
+0940: 060F     [17]     	LD B, 15
+0942: CDBA01   [34]     	CALL PRINT
+                        	
+0945: 3E24     [41]     	LD A,'$'
+0947: CD3C00   [58]     	CALL TXD
+                        	
+094A: 2A50FF   [74]     	LD HL,(LOADSTADR)  ;DOWNLOADED FILE START ADRESS
+094D: 7C       [78]     	LD A,H
+094E: CD370A   [95]     	CALL HEXOUT
+0951: 7D       [99]     	LD A,L
+0952: CD370A   [116]    	CALL HEXOUT
+                        
+0955: 3E0A     [123]    	LD A,0AH
+0957: CD3C00   [140]    	CALL TXD
+095A: 3E0D     [147]    	LD A,0DH
+095C: CD3C00   [164]    	CALL TXD
+095F: 3E07     [171]    	LD A,07H
+0961: CD3C00   [188]    	CALL TXD
+                        	
+0964: C37200   [198]    	JP MA_IN
+                        	
+                        	
+                        		
+                        ;	*********************************
+                        ;	*				*
+                        ;	*     Get Intel hex record	*
+                        ;	*				*
+                        ;	*********************************
+                        
+                        ;Short version - no checksum calculation.
+                        
+0967:                   INTLIN1:	
+0967: 3E00     [ 7]     	LD A,000H
+0969: 324BFF   [20]     	LD (HEXLDREG),A
+096C: CD4800   [17]     INTLIN:	CALL	RXD		;Get chr
+096F: FE1B     [24]     	CP  1BH
+0971: C8       [29|35]  	RET Z
+0972: FE3A     [36]     	CP	':'		;Is it ':'?
+0974: 20F6     [43|48]  	JR	NZ,INTLIN	;If not then next
+0976: CDA209   [60]     	CALL	BYTERD		;Get record length
+0979: 47       [64]     	LD	B,A		;Put in B
+097A: CDA209   [81]     	CALL	BYTERD		;Get record address hi byte
+097D: 67       [85]     	LD	H,A		;Put in H
+097E: CDA209   [102]    	CALL	BYTERD		;Get record address lo byte
+0981: 6F       [106]    	LD	L,A		;Put in L
+                        	
+0982: 3A4BFF   [119]    	LD A,(HEXLDREG)		;CHECK IF HL RECORDED TO DISPLAY SOURCE ADRESS BEFORE?
+0985: FE01     [126]    	CP 01                   ;IF NOT, RECORD IT. OTHERWISE GO ON
+0987: CA9209   [136|136]	JP Z,GO_ON
+098A: 3E01     [143]    	LD A,001H
+098C: 324BFF   [156]    	LD (HEXLDREG),A
+098F: 2250FF   [172]    	LD (LOADSTADR),HL	; LOADED PROGRAM START ADRESS HEADER REGISTER
+                        	
+0992: CDA209   [17]     GO_ON:	CALL	BYTERD		;Record type(NOT IGNORED IN EFEX MON)
+0995: FE01     [24]     	CP 01                   ;IF END OF FILE THEN EXIT PROGRAM
+0997: C8       [29|35]  	RET Z          ;JP Z,LOAD_ED        PROGRAM ENDED RETURN TO HOME
+                        	
+                        	
+0998: CDA209   [17]     DATAIN:	CALL	BYTERD		;Get record data byte
+099B: 77       [24]     	LD	(HL),A		;Save byte to memory
+099C: 23       [30]     	INC	HL		;Next address
+099D: 10F9     [38|43]  	DJNZ	DATAIN		;Decrement count and jump if not finished
+099F: 18CB     [50]     	JR	INTLIN		;Ignore checksum byte and [CR][LF]
+                        	
+09A1: C9       [60]     	RET		;PROGRAM ENDED RETURN HOME
+                        
+09A2: 1600     [ 7]     BYTERD:	LD	D,000h		;Set up   ;	* Get 2 ASCII chrs as hex byte	*
+09A4: CDAC09   [24]     	CALL	HEXCON		;Get byte and convert to hex
+09A7: 87       [28]     	ADD	A,A		;First nibble so
+09A8: 87       [32]     	ADD	A,A		;multiply by 16
+09A9: 87       [36]     	ADD	A,A		;
+09AA: 87       [40]     	ADD	A,A		;
+09AB: 57       [44]     	LD	D,A		;Save hi nibble in D
+09AC: CD4800   [17]     HEXCON:	CALL	RXD		;Get next chr
+09AF: D630     [24]     	SUB	030h		;Makes '0'-'9' equal 0-9
+09B1: FE0A     [31]     	CP	00Ah		;Is it 0-9 ?
+09B3: 3802     [38|43]  	JR	C,NALPHA	;If so miss next bit
+09B5: D607     [45]     	SUB	007h		;Else convert alpha
+09B7: B2       [ 4]     NALPHA:	OR	D		;Add hi nibble back
+09B8: C9       [14]     	RET			;
+                        
+                        ;-------------------------Hex load finished-----------------
+                        
+                        ;--------------------------INTEL HEX SAVE ROUTINE
+                        ;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+                        ;INTEL HEX SAVE PROGRAM         ;
+                        ;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+                        ;	LD HL,START ADRESS
+                        ;	LD DE, END ADRESS
+                        	
+09B9:                   INTSAVE:
+09B9: E5       [11]     	PUSH HL
+09BA: EB       [15]     	EX DE,HL
+09BB: ED52     [30]     	SBC HL,DE
+09BD: EB       [34]     	EX DE,HL
+09BE: E1       [44]     	POP HL
+09BF: 3E00     [51]     	LD A,0
+09C1: 3234FF   [64]     	LD (SAVECHCK),A	;RESET CHECKSUM COUNTER
+09C4: 0610     [71]     	LD B,10H
+                        	
+09C6: 3E0D     [78]     	LD A,0DH		;ENTER
+09C8: CD3C00   [95]     	CALL TXD ;TXD ROUTINE
+09CB: 3E0A     [102]    	LD A,0AH
+09CD: CD3C00   [119]    	CALL TXD ;TXD ROUTINE
+                        	
+09D0: 7A       [ 4]     COMP:	LD A,D	; DE TEK BAYTA INMIS
+09D1: FE00     [11]     	CP 0
+09D3: CAD909   [21|21]  	JP Z, MINUS
+09D6: C3E609   [31]     	JP DONGU
+                        	
+09D9: 7B       [ 4]     MINUS:	LD A,E      ;E 10H TAN KUCUKSE..
+09DA: D610     [11]     	SUB 10H
+09DC: DAE209   [21|21]  	JP C,MINIMUS
+09DF: C3E609   [31]     	JP DONGU
+                        	
+09E2: 43       [ 4]     MINIMUS: LD B,E    ;DE 10H TAN AZ
+09E3: C3E809   [14]     	JP DONGU1 
+                        	
+09E6: 0610     [ 7]     DONGU:	LD B,10H
+09E8: 3E3A     [ 7]     DONGU1:	LD A,':'
+09EA: CD3C00   [24]     	CALL TXD ;TXD ROUTINE		;SEND START CODE
+09ED: 78       [28]     	LD A,B
+09EE: CD370A   [45]     	CALL HEXOUT		;SEND BYTE COUNT (DEFAULT 16)
+                        	
+09F1: 7C       [49]     	LD A,H 			;SEND RECORD ADRESS
+09F2: CD370A   [66]     	CALL HEXOUT
+09F5: 7D       [70]     	LD A,L
+09F6: CD370A   [87]     	CALL HEXOUT
+                        	
+09F9: 3E00     [94]     	LD A,0 			;SEND RECORD TYPE (0=DATA)
+09FB: CD370A   [111]    	CALL HEXOUT
+                        	
+09FE: CD1F0A   [128]    	CALL YAZ
+0A01: 7A       [132]    	LD A,D		;DE BYTE COUNT REACHED?
+0A02: B3       [136]    	OR E
+0A03: C2D009   [146|146]	JP NZ, COMP
+                        	
+0A06: 3E3A     [153]    	LD A,':'		;ENDING COLON
+0A08: CD3C00   [170]    	CALL TXD ;TXD ROUTINE		
+0A0B: 0607     [177]    	LD B,07H
+0A0D: 3E30     [ 7]     DISEND:	LD A,'0'
+0A0F: CD3C00   [24]     	CALL TXD ;TXD ROUTINE
+0A12: 10F9     [32|37]  	DJNZ DISEND
+0A14: 3E31     [39]     	LD A,'1'
+0A16: CD3C00   [56]     	CALL TXD ;TXD ROUTINE
+0A19: 3EFF     [63]     	LD A,0FFH
+0A1B: CD370A   [80]     	CALL HEXOUT
+                        	
+0A1E: C9       [90]     	RET      ;PROGRAM ENDED    CALL RE_START	RESET DISPLAYS
+                        	         ;JP MA_IN	;TURN INTO ROM
+                        
+                        	
+                        	
+                        	
+                        	
+0A1F: 7E       [ 7]     YAZ:	LD A,(HL)
+0A20: CD370A   [24]     	CALL HEXOUT
+0A23: 23       [30]     	INC HL
+0A24: 1B       [36]     	DEC DE
+0A25: 10F8     [44|49]  	DJNZ YAZ		;16 BYTES SENDED
+0A27: 3EFF     [51]     	LD A, 0FFH		;SEND FAKE CHECKSUM
+0A29: CD370A   [68]     	CALL HEXOUT
+                        	
+0A2C: 3E0D     [75]     	LD A,0DH		;ENTER
+0A2E: CD3C00   [92]     	CALL TXD ;TXD ROUTINE
+0A31: 3E0A     [99]     	LD A,0AH
+0A33: CD3C00   [116]    	CALL TXD ;TXD ROUTINE
+0A36: C9       [126]    	RET
+                        		
+                        ;------------------------------SAVE FINISHED
+                        
+                        
+                        
+                        
+                        ;----------------------HEXOUT--------------------------------------------
+                        		
+                        	
+                        	
+                        ;HEXOUT DO NOT CHANGES ANY REGISTER	
+0A37: C5       [11]     HEXOUT:	PUSH BC ; THIS SUBROUTINE SENDS CONTENTS OF ACC TO TERMINAL AS 
+0A38: D5       [22]     	PUSH DE ; TWO CHAR HEX VALUE (ASCII) 
+0A39: E5       [33]     	PUSH HL
+0A3A: F5       [44]     	PUSH AF
+                        	
+0A3B: E6F0     [51]     	AND 0F0H
+0A3D: 1F       [55]     	RRA
+0A3E: 1F       [59]     	RRA
+0A3F: 1F       [63]     	RRA
+0A40: 1F       [67]     	RRA
+0A41: 3233FF   [80]     	LD (HIGHNIBBLE),A  ;HIGH NIBBLE SYSTEM VARIABLE
+0A44: CD560A   [97]     	CALL HEXAS
+                        	
+0A47: F1       [107]    	POP AF
+0A48: F5       [118]    	PUSH AF
+0A49: E60F     [125]    	AND 00FH
+0A4B: 3232FF   [138]    	LD (LOWNIBBLE),A  ;LOW NIBBLE SYSTEM VARIABLE
+0A4E: CD560A   [155]    	CALL HEXAS
+                        	
+0A51: F1       [165]    	POP AF
+0A52: E1       [175]    	POP HL
+0A53: D1       [185]    	POP DE
+0A54: C1       [195]    	POP BC
+                        	
+0A55: C9       [205]    	RET
+                        	
+0A56: 21630A   [10]     HEXAS:	LD HL, TABLEX ; HEX NIBBLE TO ASCII CONVERTER
+0A59: 0600     [17]     	LD  B, 0	;ADDING HL WITH A
+0A5B: 4F       [21]     	LD  C, A
+0A5C: ED4A     [36]     	ADC HL, BC
+0A5E: 7E       [43]            	LD A,(HL)
+0A5F: CD3C00   [60]     	CALL TXD ;TXD ROUTINE
+0A62: C9       [70]     	RET	
+0A63: 30313233          TABLEX:	.DB '0','1','2','3','4','5','6','7'
+0A67: 34353637          
+0A6B: 38394142          	.DB '8','9','A','B','C','D','E','F'
+0A6F: 43444546          
+                        	
+                        
+                        ;HEXOUT DO NOT CHANGES ANY REGISTER
+                        
+0A73:                   TABLE28:
+0A73: 0A0D              	.DB 0AH,0DH
+0A75: 454E5445          	.DB 'ENTER AD:'
+0A79: 52204144          
+0A7D: 3A                
+0A7E:                   TABLE29:
+0A7E: 0A0D              	.DB 0AH,0DH
+0A80: 454E5445          	.DB 'ENTER DT:'
+0A84: 52204454          
+0A88: 3A                
+                        	
+0A89: 0C0D              TABLE: 	.DB 0CH,0DH
+0A8B: 45666578          	.DB 'EfexMon '
+0A8F: 4D6F6E20          
+0A93: 4279204D          	.DB 'By M.PEKER '
+0A97: 2E50454B          
+0A9B: 455220            
+0A9E: 76312E30                  .DB 'v1.0b'
+0AA2: 62                
+                        
+0AA3: 0A0D              	.DB 0AH,0DH
+0AA5: 50726573          	.DB 'Press H '
+0AA9: 73204820          
+0AAD: 666F7220          	.DB 'for help'
+0AB1: 68656C70          
+0AB5: 0A0D              	.DB 0AH,0DH
+0AB7: 0A0D                      .DB 0AH,0DH 
+0AB9: 52656164          	.DB 'Ready.'
+0ABD: 792E              
+0ABF: 0A0D              	.DB 0AH,0DH
+0AC1: 07                	.DB 07H
+                        	
+                        	
+0AC2:                   TABLE13:
+0AC2: 0A0D07            	.DB 0AH,0DH,07H
+0AC5: 50726573          	.DB 'Press '
+0AC9: 7320              
+0ACB: 616E7920          	.DB 'any key '
+0ACF: 6B657920          
+0AD3: 746F2073          	.DB 'to send !'
+0AD7: 656E6420          
+0ADB: 21                
+0ADC: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+                        
+                        	
+0ADE: 0D                TABLE2: .DB 0DH 
+0ADF: 6C6F6164          	.DB 'loaded '
+0AE3: 656420            
+0AE6: 61647265          	.DB 'adress:'
+0AEA: 73733A            
+                        
+0AED:                   TABLE25: 
+0AED: 0D                	.DB 0DH
+0AEE: 48657820          	.DB 'Hex Loading'
+0AF2: 4C6F6164          
+0AF6: 696E67            
+0AF9: 2E2E2E            	.DB '...'
+                                
+                        		
+                        	
+                        	
+0AFC: 0A0D              TABLE6:	.DB 0AH,0DH
+0AFE: 433A5C3E          	.DB 'C:\>'
+                        	
+0B02:                   TABLE21:
+0B02: 0A0D              	.DB 0AH,0DH
+                        
+                        	
+                        	
+0B04: 412D              	.DB 'A-'
+0B06: 41737365          	.DB 'Assembler'
+0B0A: 6D626C65          
+0B0E: 72                
+0B0F: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+0B11: 442D              	.DB 'D-'
+0B13: 44697361          	.DB 'Disassembler'
+0B17: 7373656D          
+0B1B: 626C6572          
+0B1F: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+0B21: 4C2D4C6F          	.DB 'L-Load'
+0B25: 6164              
+                        
+0B27: 0A0D              	.DB 0AH,0DH
+                        	
+                        
+0B29: 532D5361          	.DB 'S-Save'
+0B2D: 7665              
+                        
+0B2F: 0A0D              	.DB 0AH,0DH
+                        	
+                        
+0B31: 452D4564          	.DB 'E-Edit'
+0B35: 6974              
+                        
+0B37: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+0B39: 572D5761          	.DB 'W-Warmst'
+0B3D: 726D7374          
+                        
+0B41: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+0B43: 4D2D4D6F          	.DB 'M-Move'
+0B47: 7665              
+0B49: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+0B4B: 582D4865          	.DB 'X-Hexdump'
+0B4F: 7864756D          
+0B53: 70                
+0B54: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+                        		
+0B56: 472D476F          	.DB 'G-Go'
+0B5A: 0A0D               	.DB 0AH,0DH
+                        	
+0B5C: 462D4669          	.DB 'F-Fill'
+0B60: 6C6C              
+0B62: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+0B64: 552D526F          	.DB 'U-Routines'
+0B68: 7574696E          
+0B6C: 6573              
+                         
+0B6E: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+0B70:                   TABLEH10:	
+0B70: 44454C41          	.DB 'DELAY  (S):  $'
+0B74: 59202028          
+0B78: 53293A20          
+0B7C: 2024              
+                        	
+                        
+                        	
+0B7E:                   TABLEH8:	
+0B7E: 50524F4D          	.DB 'PROMPT (R):  $'
+0B82: 50542028          
+0B86: 52293A20          
+0B8A: 2024              
+                        		
+0B8C:                   TABLEH7:
+                        	
+0B8C: 2041202D          	.DB ' A -> UART'
+0B90: 3E205541          
+0B94: 5254              
+0B96: 0A0D              	.DB 0AH,0DH
+                        	
+0B98:                   TABLEH6:
+                        	
+0B98: 4845584F          	.DB 'HEXOUT (S):  $'
+0B9C: 55542028          
+0BA0: 53293A20          
+0BA4: 2024              
+                        	
+                        	
+                        	
+0BA6:                   TABLEH5:
+                        	
+0BA6: 202D3E20          	.DB ' -> FF42'
+0BAA: 46463432          
+0BAE: 0A0D              	.DB 0AH,0DH
+                        	
+                        	
+0BB0:                   TABLEH4:	
+0BB0: 42595445          	.DB 'BYTEIN1(S):  $'
+0BB4: 494E3128          
+0BB8: 53293A20          
+0BBC: 2024              
+                        
+0BBE:                   TABLEH3:	
+                        	
+                        	
+0BBE: 202D3E20          	.DB ' -> FF43-FF44'
+0BC2: 46463433          
+0BC6: 2D464634          
+0BCA: 34                
+0BCB: 0A0D              	.DB 0AH,0DH
+                        
+0BCD:                   TABLEH2:            ;
+0BCD: 42595445          	.DB 'BYTEIN2(S):  $'	
+0BD1: 494E3228          
+0BD5: 53293A20          
+0BD9: 2024              
+                        	
+0BDB:                   TABLEH1:
+0BDB: 52584420          	.DB 'RXD    (S):  $'	
+0BDF: 20202028          
+0BE3: 53293A20          
+0BE7: 2024              
+                        	
+0BE9:                   TABLE22:
+                        
+                        	
+0BE9: 54584420          	.DB 'TXD    (S):  $'
+0BED: 20202028          
+0BF1: 53293A20          
+0BF5: 2024              
+                        	
+                        	
+                        ;--ASSEMBLER AND DISASSEMBLER OPERATES ON SAME TABLE
+                        ;
+                        ;        
+                        ;INSTRUCTION , VIRGUL, CODE COUNT,MACHINE CODE,OPERAND #-$-NULL, TOTAL BYTE COUNT 
+                        ;2CH VIRGUL DEMEK
+                        ;BU ASSEMBLER .DB DE VIRGUL KABUL ETMIYOR!!!
+                        
+                        	
+0BF7:                   TABLECOD:
+                        
+                        		
+0BF7: 5F414443          	.DB '_ADC A',2CH,'(HL)',1,08EH,0FFH
+0BFB: 20412C28          
+0BFF: 484C2901          
+0C03: 8EFF              
+                        
+0C05: 5F414443          	.DB '_ADC A',2CH,'A',1,08FH,0FFH	;0FFH IS NULL INDEX CODE TO FIND  COMMAND 
+0C09: 20412C41          
+0C0D: 018FFF            
+0C10: 5F414443          	.DB '_ADC A',2CH,'B',1,088H,0FFH	;'_' IS INDEX CHAR TO FIND MNEMONIC
+0C14: 20412C42          
+0C18: 0188FF            
+0C1B: 5F414443          	.DB '_ADC A',2CH,'C',1,089H,0FFH
+0C1F: 20412C43          
+0C23: 0189FF            
+0C26: 5F414443          	.DB '_ADC A',2CH,'D',1,08AH,0FFH
+0C2A: 20412C44          
+0C2E: 018AFF            
+0C31: 5F414443          	.DB '_ADC A',2CH,'E',1,08BH,0FFH
+0C35: 20412C45          
+0C39: 018BFF            
+0C3C: 5F414443          	.DB '_ADC A',2CH,'H',1,08CH,0FFH
+0C40: 20412C48          
+0C44: 018CFF            
+0C47: 5F414443          	.DB '_ADC A',2CH,'L',1,08DH,0FFH
+0C4B: 20412C4C          
+0C4F: 018DFF            
+0C52: 5F414443          	.DB '_ADC A',2CH,'#',1,0CEH,0FFH
+0C56: 20412C23          
+0C5A: 01CEFF            
+                        
+                           
+0C5D: 5F414444          	.DB '_ADD A',2CH,'(HL)',1,086H,0FFH
+0C61: 20412C28          
+0C65: 484C2901          
+0C69: 86FF              
+                        
+0C6B: 5F414444          	.DB '_ADD A',2CH,'A',1,087H,0FFH
+0C6F: 20412C41          
+0C73: 0187FF            
+0C76: 5F414444          	.DB '_ADD A',2CH,'B',1,080H,0FFH
+0C7A: 20412C42          
+0C7E: 0180FF            
+0C81: 5F414444          	.DB '_ADD A',2CH,'C',1,081H,0FFH
+0C85: 20412C43          
+0C89: 0181FF            
+0C8C: 5F414444          	.DB '_ADD A',2CH,'D',1,082H,0FFH
+0C90: 20412C44          
+0C94: 0182FF            
+0C97: 5F414444          	.DB '_ADD A',2CH,'E',1,083H,0FFH
+0C9B: 20412C45          
+0C9F: 0183FF            
+0CA2: 5F414444          	.DB '_ADD A',2CH,'H',1,084H,0FFH
+0CA6: 20412C48          
+0CAA: 0184FF            
+0CAD: 5F414444          	.DB '_ADD A',2CH,'L',1,085H,0FFH
+0CB1: 20412C4C          
+0CB5: 0185FF            
+0CB8: 5F414444          	.DB '_ADD A',2CH,'#',1,0C6H,0FFH
+0CBC: 20412C23          
+0CC0: 01C6FF            
+0CC3: 5F414444          	.DB '_ADD HL',2CH,'BC',1,009H,0FFH
+0CC7: 20484C2C          
+0CCB: 42430109          
+0CCF: FF                
+0CD0: 5F414444          	.DB '_ADD HL',2CH,'DE',1,019H,0FFH
+0CD4: 20484C2C          
+0CD8: 44450119          
+0CDC: FF                
+0CDD: 5F414444          	.DB '_ADD HL',2CH,'HL',1,029H,0FFH
+0CE1: 20484C2C          
+0CE5: 484C0129          
+0CE9: FF                
+0CEA: 5F414444          	.DB '_ADD HL',2CH,'SP',1,039H,0FFH
+0CEE: 20484C2C          
+0CF2: 53500139          
+0CF6: FF                
+                        
+                           
+0CF7: 5F414E44          	.DB '_AND (HL)',1,0A6H,0FFH
+0CFB: 2028484C          
+0CFF: 2901A6FF          
+                        
+0D03: 5F414E44          	.DB '_AND A',1,0A7H,0FFH
+0D07: 204101A7          
+0D0B: FF                
+0D0C: 5F414E44          	.DB '_AND B',1,0A0H,0FFH
+0D10: 204201A0          
+0D14: FF                
+0D15: 5F414E44          	.DB '_AND C',1,0A1H,0FFH
+0D19: 204301A1          
+0D1D: FF                
+0D1E: 5F414E44          	.DB '_AND D',1,0A2H,0FFH
+0D22: 204401A2          
+0D26: FF                
+0D27: 5F414E44          	.DB '_AND E',1,0A3H,0FFH
+0D2B: 204501A3          
+0D2F: FF                
+0D30: 5F414E44          	.DB '_AND H',1,0A4H,0FFH
+0D34: 204801A4          
+0D38: FF                
+0D39: 5F414E44          	.DB '_AND L',1,0A5H,0FFH
+0D3D: 204C01A5          
+0D41: FF                
+0D42: 5F414E44          	.DB '_AND #',1,0E6H,0FFH
+0D46: 202301E6          
+0D4A: FF                
+                        	
+                        
+                        	   
+                        
+                        	   
+0D4B: 5F43414C          	.DB '_CALL C',2CH,'$',1,0DCH,0FFH
+0D4F: 4C20432C          
+0D53: 2401DCFF          
+0D57: 5F43414C          	.DB '_CALL M',2CH,'$',1,0FCH,0FFH
+0D5B: 4C204D2C          
+0D5F: 2401FCFF          
+0D63: 5F43414C          	.DB '_CALL NC',2CH,'$',1,0D4H,0FFH
+0D67: 4C204E43          
+0D6B: 2C2401D4          
+0D6F: FF                
+0D70: 5F43414C          	.DB '_CALL NZ',2CH,'$',1,0C4H,0FFH
+0D74: 4C204E5A          
+0D78: 2C2401C4          
+0D7C: FF                
+0D7D: 5F43414C          	.DB '_CALL P',2CH,'$',1,0F4H,0FFH
+0D81: 4C20502C          
+0D85: 2401F4FF          
+0D89: 5F43414C          	.DB '_CALL PE',2CH,'$',1,0ECH,0FFH
+0D8D: 4C205045          
+0D91: 2C2401EC          
+0D95: FF                
+0D96: 5F43414C          	.DB '_CALL PO',2CH,'$',1,0E4H,0FFH
+0D9A: 4C20504F          
+0D9E: 2C2401E4          
+0DA2: FF                
+0DA3: 5F43414C          	.DB '_CALL Z',2CH,'$',1,0CCH,0FFH
+0DA7: 4C205A2C          
+0DAB: 2401CCFF          
+0DAF: 5F43414C          	.DB '_CALL $',1,0CDH,0FFH
+0DB3: 4C202401          
+0DB7: CDFF              
+                        	   
+0DB9: 5F434346          	.DB '_CCF',1,03FH,0FFH
+0DBD: 013FFF            
+                        	   
+0DC0: 5F435020          	.DB '_CP (HL)',1,0BEH,0FFH
+0DC4: 28484C29          
+0DC8: 01BEFF            
+                        
+0DCB: 5F435020          	.DB '_CP A',1,0BFH,0FFH
+0DCF: 4101BFFF          
+0DD3: 5F435020          	.DB '_CP B',1,0B8H,0FFH
+0DD7: 4201B8FF          
+0DDB: 5F435020          	.DB '_CP C',1,0B9H,0FFH
+0DDF: 4301B9FF          
+0DE3: 5F435020          	.DB '_CP D',1,0BAH,0FFH
+0DE7: 4401BAFF          
+0DEB: 5F435020          	.DB '_CP E',1,0BBH,0FFH
+0DEF: 4501BBFF          
+0DF3: 5F435020          	.DB '_CP H',1,0BCH,0FFH
+0DF7: 4801BCFF          
+0DFB: 5F435020          	.DB '_CP L',1,0BDH,0FFH
+0DFF: 4C01BDFF          
+0E03: 5F435020          	.DB '_CP #',1,0FEH,0FFH
+0E07: 2301FEFF          
+                        	
+                        
+                        
+0E0B: 5F43504C          	.DB '_CPL',1,02FH,0FFH
+0E0F: 012FFF            
+                        	   
+0E12: 5F444141          	.DB '_DAA',1,027H,0FFH
+0E16: 0127FF            
+                        	   
+0E19: 5F444543          	.DB '_DEC (HL)',1,035H,0FFH
+0E1D: 2028484C          
+0E21: 290135FF          
+                        
+0E25: 5F444543          	.DB '_DEC A',1,03DH,0FFH
+0E29: 2041013D          
+0E2D: FF                
+0E2E: 5F444543          	.DB '_DEC B',1,005H,0FFH
+0E32: 20420105          
+0E36: FF                
+0E37: 5F444543          	.DB '_DEC BC',1,00BH,0FFH
+0E3B: 20424301          
+0E3F: 0BFF              
+0E41: 5F444543          	.DB '_DEC C',1,00DH,0FFH
+0E45: 2043010D          
+0E49: FF                
+0E4A: 5F444543          	.DB '_DEC D',1,015H,0FFH
+0E4E: 20440115          
+0E52: FF                
+0E53: 5F444543          	.DB '_DEC DE',1,01BH,0FFH
+0E57: 20444501          
+0E5B: 1BFF              
+0E5D: 5F444543          	.DB '_DEC E',1,01DH,0FFH
+0E61: 2045011D          
+0E65: FF                
+0E66: 5F444543          	.DB '_DEC H',1,025H,0FFH
+0E6A: 20480125          
+0E6E: FF                
+0E6F: 5F444543          	.DB '_DEC HL',1,02BH,0FFH
+0E73: 20484C01          
+0E77: 2BFF              
+                        
+0E79: 5F444543          	.DB '_DEC L',1,02DH,0FFH
+0E7D: 204C012D          
+0E81: FF                
+0E82: 5F444543          	.DB '_DEC SP',1,03BH,0FFH
+0E86: 20535001          
+0E8A: 3BFF              
+0E8C: 5F444901          	.DB '_DI',1,0F3H,0FFH
+0E90: F3FF              
+0E92: 5F444A4E          	.DB '_DJNZ #',1,010H,0FFH
+0E96: 5A202301          
+0E9A: 10FF              
+                        	   
+0E9C: 5F454901          	.DB '_EI',1,0FBH,0FFH
+0EA0: FBFF              
+0EA2: 5F455820          	.DB '_EX (SP)',2CH,'HL',1,0E3H,0FFH
+0EA6: 28535029          
+0EAA: 2C484C01          
+0EAE: E3FF              
+0EB0: 5F455820          	.DB '_EX AF',2CH,'AF',1,008H,0FFH
+0EB4: 41462C41          
+0EB8: 460108FF          
+0EBC: 5F455820          	.DB '_EX DE',2CH,'HL',1,0EBH,0FFH
+0EC0: 44452C48          
+0EC4: 4C01EBFF          
+0EC8: 5F455858          	.DB '_EXX',1,0D9H,0FFH
+0ECC: 01D9FF            
+                        
+0ECF: 5F48414C          	.DB '_HALT',1,076H,0FFH
+0ED3: 540176FF          
+                        	   
+                        
+                        	   
+                        
+                        	   
+0ED7: 5F494E20          	.DB '_IN A',2CH,'(#)',1,0DBH,0FFH
+0EDB: 412C2823          
+0EDF: 2901DBFF          
+                        	   
+                        
+0EE3: 5F494E43          	 DB '_INC (HL)',1,034H,0FFH
+0EE7: 2028484C          
+0EEB: 290134FF          
+                        
+0EEF: 5F494E43          	.DB '_INC A',1,03CH,0FFH
+0EF3: 2041013C          
+0EF7: FF                
+0EF8: 5F494E43          	.DB '_INC B',1,004H,0FFH
+0EFC: 20420104          
+0F00: FF                
+0F01: 5F494E43          	.DB '_INC BC',1,003H,0FFH
+0F05: 20424301          
+0F09: 03FF              
+0F0B: 5F494E43          	.DB '_INC C',1,00CH,0FFH
+0F0F: 2043010C          
+0F13: FF                
+0F14: 5F494E43          	.DB '_INC D',1,014H,0FFH
+0F18: 20440114          
+0F1C: FF                
+0F1D: 5F494E43          	.DB '_INC DE',1,013H,0FFH
+0F21: 20444501          
+0F25: 13FF              
+0F27: 5F494E43          	.DB '_INC E',1,01CH,0FFH
+0F2B: 2045011C          
+0F2F: FF                
+0F30: 5F494E43          	.DB '_INC H',1,024H,0FFH
+0F34: 20480124          
+0F38: FF                
+0F39: 5F494E43          	.DB '_INC HL',1,023H,0FFH
+0F3D: 20484C01          
+0F41: 23FF              
+                        
+0F43: 5F494E43          	.DB '_INC L',1,02CH,0FFH
+0F47: 204C012C          
+0F4B: FF                
+0F4C: 5F494E43          	.DB '_INC SP',1,033H,0FFH
+0F50: 20535001          
+0F54: 33FF              
+                        	   
+0F56: 5F4A5220          	.DB '_JR C',2CH,'#',1,038H,0FFH
+0F5A: 432C2301          
+0F5E: 38FF              
+0F60: 5F4A5220          	.DB '_JR NC',2CH,'#',1,030H,0FFH
+0F64: 4E432C23          
+0F68: 0130FF            
+0F6B: 5F4A5220          	.DB '_JR NZ',2CH,'#',1,020H,0FFH
+0F6F: 4E5A2C23          
+0F73: 0120FF            
+0F76: 5F4A5220          	.DB '_JR Z',2CH,'#',1,028H,0FFH
+0F7A: 5A2C2301          
+0F7E: 28FF              
+0F80: 5F4A5220          	.DB '_JR #',1,018H,0FFH	   
+0F84: 230118FF          
+                        
+                        	   
+                        
+0F88: 5F4A5020          	.DB '_JP (HL)',1,0E9H,0FFH
+0F8C: 28484C29          
+0F90: 01E9FF            
+                        
+0F93: 5F4A5020          	.DB '_JP C',2CH,'$',1,0DAH,0FFH
+0F97: 432C2401          
+0F9B: DAFF              
+0F9D: 5F4A5020          	.DB '_JP M',2CH,'$',1,0FAH,0FFH
+0FA1: 4D2C2401          
+0FA5: FAFF              
+0FA7: 5F4A5020          	.DB '_JP NC',2CH,'$',1,0D2H,0FFH
+0FAB: 4E432C24          
+0FAF: 01D2FF            
+0FB2: 5F4A5020          	.DB '_JP NZ',2CH,'$',1,0C2H,0FFH
+0FB6: 4E5A2C24          
+0FBA: 01C2FF            
+0FBD: 5F4A5020          	.DB '_JP P',2CH,'$',1,0F2H,0FFH
+0FC1: 502C2401          
+0FC5: F2FF              
+0FC7: 5F4A5020          	.DB '_JP PE',2CH,'$',1,0EAH,0FFH
+0FCB: 50452C24          
+0FCF: 01EAFF            
+0FD2: 5F4A5020          	.DB '_JP PO',2CH,'$',1,0E2H,0FFH
+0FD6: 504F2C24          
+0FDA: 01E2FF            
+0FDD: 5F4A5020          	.DB '_JP Z',2CH,'$',1,0CAH,0FFH
+0FE1: 5A2C2401          
+0FE5: CAFF              
+0FE7: 5F4A5020          	.DB '_JP $',1,0C3H,0FFH
+0FEB: 2401C3FF          
+                        	   
+                        
+                        	   
+0FEF: 5F4C4420          	.DB '_LD (BC)',2CH,'A',1,002H,0FFH
+0FF3: 28424329          
+0FF7: 2C410102          
+0FFB: FF                
+0FFC: 5F4C4420          	.DB '_LD (DE)',2CH,'A',1,012H,0FFH
+1000: 28444529          
+1004: 2C410112          
+1008: FF                
+1009: 5F4C4420          	.DB '_LD (HL)',2CH,'A',1,077H,0FFH
+100D: 28484C29          
+1011: 2C410177          
+1015: FF                
+1016: 5F4C4420          	.DB '_LD (HL)',2CH,'B',1,070H,0FFH
+101A: 28484C29          
+101E: 2C420170          
+1022: FF                
+1023: 5F4C4420          	.DB '_LD (HL)',2CH,'C',1,071H,0FFH
+1027: 28484C29          
+102B: 2C430171          
+102F: FF                
+1030: 5F4C4420          	.DB '_LD (HL)',2CH,'D',1,072H,0FFH
+1034: 28484C29          
+1038: 2C440172          
+103C: FF                
+103D: 5F4C4420          	.DB '_LD (HL)',2CH,'E',1,073H,0FFH
+1041: 28484C29          
+1045: 2C450173          
+1049: FF                
+104A: 5F4C4420          	.DB '_LD (HL)',2CH,'H',1,074H,0FFH
+104E: 28484C29          
+1052: 2C480174          
+1056: FF                
+1057: 5F4C4420          	.DB '_LD (HL)',2CH,'L',1,075H,0FFH
+105B: 28484C29          
+105F: 2C4C0175          
+1063: FF                
+1064: 5F4C4420          	.DB '_LD (HL)',2CH,'#',1,036H,0FFH
+1068: 28484C29          
+106C: 2C230136          
+1070: FF                
+                        
+1071: 5F4C4420          	.DB '_LD ($)',2CH,'A',1,032H,0FFH
+1075: 2824292C          
+1079: 410132FF          
+107D: 5F4C4420          	.DB '_LD ($)',2CH,'HL',1,022H,0FFH
+1081: 2824292C          
+1085: 484C0122          
+1089: FF                
+                        	
+                        	
+108A: 5F4C4420          	.DB '_LD A',2CH,'(BC)',1,00AH,0FFH
+108E: 412C2842          
+1092: 4329010A          
+1096: FF                
+1097: 5F4C4420          	.DB '_LD A',2CH,'(DE)',1,01AH,0FFH
+109B: 412C2844          
+109F: 4529011A          
+10A3: FF                
+10A4: 5F4C4420          	.DB '_LD A',2CH,'(HL)',1,07EH,0FFH
+10A8: 412C2848          
+10AC: 4C29017E          
+10B0: FF                
+                        
+10B1: 5F4C4420          	.DB '_LD A',2CH,'A',1,07FH,0FFH
+10B5: 412C4101          
+10B9: 7FFF              
+10BB: 5F4C4420          	.DB '_LD A',2CH,'B',1,078H,0FFH
+10BF: 412C4201          
+10C3: 78FF              
+10C5: 5F4C4420          	.DB '_LD A',2CH,'C',1,079H,0FFH
+10C9: 412C4301          
+10CD: 79FF              
+10CF: 5F4C4420          	.DB '_LD A',2CH,'D',1,07AH,0FFH
+10D3: 412C4401          
+10D7: 7AFF              
+10D9: 5F4C4420          	.DB '_LD A',2CH,'E',1,07BH,0FFH
+10DD: 412C4501          
+10E1: 7BFF              
+10E3: 5F4C4420          	.DB '_LD A',2CH,'H',1,07CH,0FFH
+10E7: 412C4801          
+10EB: 7CFF              
+10ED: 5F4C4420          	.DB '_LD A',2CH,'L',1,07DH,0FFH
+10F1: 412C4C01          
+10F5: 7DFF              
+10F7: 5F4C4420          	.DB '_LD A',2CH,'($)',1,03AH,0FFH
+10FB: 412C2824          
+10FF: 29013AFF          
+1103: 5F4C4420          	.DB '_LD A',2CH,'#',1,03EH,0FFH             
+1107: 412C2301          
+110B: 3EFF              
+110D: 5F4C4420          	.DB '_LD B',2CH,'(HL)',1,046H,0FFH
+1111: 422C2848          
+1115: 4C290146          
+1119: FF                
+111A: 5F4C4420          	.DB '_LD B',2CH,'A',1,047H,0FFH
+111E: 422C4101          
+1122: 47FF              
+1124: 5F4C4420          	.DB '_LD B',2CH,'B',1,040H,0FFH
+1128: 422C4201          
+112C: 40FF              
+112E: 5F4C4420          	.DB '_LD B',2CH,'C',1,041H,0FFH
+1132: 422C4301          
+1136: 41FF              
+1138: 5F4C4420          	.DB '_LD B',2CH,'D',1,042H,0FFH
+113C: 422C4401          
+1140: 42FF              
+1142: 5F4C4420          	.DB '_LD B',2CH,'E',1,043H,0FFH
+1146: 422C4501          
+114A: 43FF              
+114C: 5F4C4420          	.DB '_LD B',2CH,'H',1,044H,0FFH
+1150: 422C4801          
+1154: 44FF              
+1156: 5F4C4420          	.DB '_LD B',2CH,'L',1,045H,0FFH
+115A: 422C4C01          
+115E: 45FF              
+1160: 5F4C4420          	.DB '_LD B',2CH,'#',1,006H,0FFH
+1164: 422C2301          
+1168: 06FF              
+116A: 5F4C4420          	.DB '_LD BC',2CH,'$',1,001H,0FFH
+116E: 42432C24          
+1172: 0101FF            
+1175: 5F4C4420          	.DB '_LD C',2CH,'(HL)',1,04EH,0FFH
+1179: 432C2848          
+117D: 4C29014E          
+1181: FF                
+1182: 5F4C4420          	.DB '_LD C',2CH,'A',1,04FH,0FFH
+1186: 432C4101          
+118A: 4FFF              
+118C: 5F4C4420          	.DB '_LD C',2CH,'B',1,048H,0FFH
+1190: 432C4201          
+1194: 48FF              
+1196: 5F4C4420          	.DB '_LD C',2CH,'C',1,049H,0FFH
+119A: 432C4301          
+119E: 49FF              
+11A0: 5F4C4420          	.DB '_LD C',2CH,'D',1,04AH,0FFH
+11A4: 432C4401          
+11A8: 4AFF              
+11AA: 5F4C4420          	.DB '_LD C',2CH,'E',1,04BH,0FFH
+11AE: 432C4501          
+11B2: 4BFF              
+11B4: 5F4C4420          	.DB '_LD C',2CH,'H',1,04CH,0FFH
+11B8: 432C4801          
+11BC: 4CFF              
+11BE: 5F4C4420          	.DB '_LD C',2CH,'L',1,04DH,0FFH
+11C2: 432C4C01          
+11C6: 4DFF              
+11C8: 5F4C4420          	.DB '_LD C',2CH,'#',1,00EH,0FFH
+11CC: 432C2301          
+11D0: 0EFF              
+11D2: 5F4C4420          	.DB '_LD D',2CH,'(HL)',1,056H,0FFH
+11D6: 442C2848          
+11DA: 4C290156          
+11DE: FF                
+11DF: 5F4C4420          	.DB '_LD D',2CH,'A',1,057H,0FFH
+11E3: 442C4101          
+11E7: 57FF              
+11E9: 5F4C4420          	.DB '_LD D',2CH,'B',1,050H,0FFH
+11ED: 442C4201          
+11F1: 50FF              
+11F3: 5F4C4420          	.DB '_LD D',2CH,'C',1,051H,0FFH
+11F7: 442C4301          
+11FB: 51FF              
+11FD: 5F4C4420          	.DB '_LD D',2CH,'D',1,052H,0FFH
+1201: 442C4401          
+1205: 52FF              
+1207: 5F4C4420          	.DB '_LD D',2CH,'E',1,053H,0FFH
+120B: 442C4501          
+120F: 53FF              
+1211: 5F4C4420          	.DB '_LD D',2CH,'H',1,054H,0FFH
+1215: 442C4801          
+1219: 54FF              
+121B: 5F4C4420          	.DB '_LD D',2CH,'L',1,055H,0FFH
+121F: 442C4C01          
+1223: 55FF              
+1225: 5F4C4420          	.DB '_LD D',2CH,'#',1,016H,0FFH
+1229: 442C2301          
+122D: 16FF              
+122F: 5F4C4420          	.DB '_LD DE',2CH,'$',1,011H,0FFH
+1233: 44452C24          
+1237: 0111FF            
+123A: 5F4C4420          	.DB '_LD E',2CH,'(HL)',1,05EH,0FFH
+123E: 452C2848          
+1242: 4C29015E          
+1246: FF                
+1247: 5F4C4420          	.DB '_LD E',2CH,'A',1,05FH,0FFH
+124B: 452C4101          
+124F: 5FFF              
+1251: 5F4C4420          	.DB '_LD E',2CH,'B',1,058H,0FFH
+1255: 452C4201          
+1259: 58FF              
+125B: 5F4C4420          	.DB '_LD E',2CH,'C',1,059H,0FFH
+125F: 452C4301          
+1263: 59FF              
+1265: 5F4C4420          	.DB '_LD E',2CH,'D',1,05AH,0FFH
+1269: 452C4401          
+126D: 5AFF              
+126F: 5F4C4420          	.DB '_LD E',2CH,'E',1,05BH,0FFH
+1273: 452C4501          
+1277: 5BFF              
+1279: 5F4C4420          	.DB '_LD E',2CH,'H',1,05CH,0FFH
+127D: 452C4801          
+1281: 5CFF              
+1283: 5F4C4420          	.DB '_LD E',2CH,'L',1,05DH,0FFH
+1287: 452C4C01          
+128B: 5DFF              
+128D: 5F4C4420          	.DB '_LD E',2CH,'#',1,01EH,0FFH
+1291: 452C2301          
+1295: 1EFF              
+1297: 5F4C4420          	.DB '_LD H',2CH,'(HL)',1,066H,0FFH
+129B: 482C2848          
+129F: 4C290166          
+12A3: FF                
+12A4: 5F4C4420          	.DB '_LD H',2CH,'A',1,067H,0FFH
+12A8: 482C4101          
+12AC: 67FF              
+12AE: 5F4C4420          	.DB '_LD H',2CH,'B',1,060H,0FFH
+12B2: 482C4201          
+12B6: 60FF              
+12B8: 5F4C4420          	.DB '_LD H',2CH,'C',1,061H,0FFH
+12BC: 482C4301          
+12C0: 61FF              
+12C2: 5F4C4420          	.DB '_LD H',2CH,'D',1,062H,0FFH
+12C6: 482C4401          
+12CA: 62FF              
+12CC: 5F4C4420          	.DB '_LD H',2CH,'E',1,063H,0FFH
+12D0: 482C4501          
+12D4: 63FF              
+12D6: 5F4C4420          	.DB '_LD H',2CH,'H',1,064H,0FFH
+12DA: 482C4801          
+12DE: 64FF              
+12E0: 5F4C4420          	.DB '_LD H',2CH,'L',1,065H,0FFH
+12E4: 482C4C01          
+12E8: 65FF              
+12EA: 5F4C4420          	.DB '_LD H',2CH,'#',1,026H,0FFH
+12EE: 482C2301          
+12F2: 26FF              
+12F4: 5F4C4420          	.DB '_LD HL',2CH,'($)',1,02AH,0FFH
+12F8: 484C2C28          
+12FC: 2429012A          
+1300: FF                
+1301: 5F4C4420          	.DB '_LD HL',2CH,'$',1,021H,0FFH
+1305: 484C2C24          
+1309: 0121FF            
+130C: 5F4C4420          	.DB '_LD L',2CH,'(HL)',1,06EH,0FFH
+1310: 4C2C2848          
+1314: 4C29016E          
+1318: FF                
+1319: 5F4C4420          	.DB '_LD L',2CH,'A',1,06FH,0FFH
+131D: 4C2C4101          
+1321: 6FFF              
+1323: 5F4C4420          	.DB '_LD L',2CH,'B',1,068H,0FFH
+1327: 4C2C4201          
+132B: 68FF              
+132D: 5F4C4420          	.DB '_LD L',2CH,'C',1,069H,0FFH
+1331: 4C2C4301          
+1335: 69FF              
+1337: 5F4C4420          	.DB '_LD L',2CH,'D',1,06AH,0FFH
+133B: 4C2C4401          
+133F: 6AFF              
+1341: 5F4C4420          	.DB '_LD L',2CH,'E',1,06BH,0FFH
+1345: 4C2C4501          
+1349: 6BFF              
+134B: 5F4C4420          	.DB '_LD L',2CH,'H',1,06CH,0FFH
+134F: 4C2C4801          
+1353: 6CFF              
+1355: 5F4C4420          	.DB '_LD L',2CH,'L',1,06DH,0FFH
+1359: 4C2C4C01          
+135D: 6DFF              
+135F: 5F4C4420          	.DB '_LD L',2CH,'#',1,02EH,0FFH
+1363: 4C2C2301          
+1367: 2EFF              
+1369: 5F4C4420          	.DB '_LD SP',2CH,'$',1,031H,0FFH
+136D: 53502C24          
+1371: 0131FF            
+1374: 5F4C4420          	.DB '_LD SP',2CH,'HL',1,0F9H,0FFH
+1378: 53502C48          
+137C: 4C01F9FF          
+                        	
+                        	
+                        			
+                        
+                        
+                        
+                        	
+                        
+1380: 5F4E4F50          	.DB '_NOP',1,000H,0FFH
+1384: 0100FF            
+                           
+1387: 5F4F5220          	.DB '_OR (HL)',1,0B6H,0FFH
+138B: 28484C29          
+138F: 01B6FF            
+                        
+1392: 5F4F5220          	.DB '_OR A',1,0B7H,0FFH
+1396: 4101B7FF          
+139A: 5F4F5220          	.DB '_OR B',1,0B0H,0FFH
+139E: 4201B0FF          
+13A2: 5F4F5220          	.DB '_OR C',1,0B1H,0FFH
+13A6: 4301B1FF          
+13AA: 5F4F5220          	.DB '_OR D',1,0B2H,0FFH
+13AE: 4401B2FF          
+13B2: 5F4F5220          	.DB '_OR E',1,0B3H,0FFH
+13B6: 4501B3FF          
+13BA: 5F4F5220          	.DB '_OR H',1,0B4H,0FFH
+13BE: 4801B4FF          
+13C2: 5F4F5220          	.DB '_OR L',1,0B5H,0FFH
+13C6: 4C01B5FF          
+13CA: 5F4F5220          	.DB '_OR #',1,0F6H,0FFH
+13CE: 2301F6FF          
+                        	   
+                        
+13D2: 5F4F5554          	.DB '_OUT (#)',2CH,'A',1,0D3H,0FFH
+13D6: 20282329          
+13DA: 2C4101D3          
+13DE: FF                
+                        	   
+                        	   
+                        
+                        	   
+13DF: 5F504F50          	.DB '_POP AF',1,0F1H,0FFH
+13E3: 20414601          
+13E7: F1FF              
+13E9: 5F504F50          	.DB '_POP BC',1,0C1H,0FFH
+13ED: 20424301          
+13F1: C1FF              
+13F3: 5F504F50          	.DB '_POP DE',1,0D1H,0FFH
+13F7: 20444501          
+13FB: D1FF              
+13FD: 5F504F50          	.DB '_POP HL',1,0E1H,0FFH
+1401: 20484C01          
+1405: E1FF              
+                        
+                        	   
+1407: 5F505553          	.DB '_PUSH AF',1,0F5H,0FFH
+140B: 48204146          
+140F: 01F5FF            
+1412: 5F505553          	.DB '_PUSH BC',1,0C5H,0FFH
+1416: 48204243          
+141A: 01C5FF            
+141D: 5F505553          	.DB '_PUSH DE',1,0D5H,0FFH
+1421: 48204445          
+1425: 01D5FF            
+1428: 5F505553          	.DB '_PUSH HL',1,0E5H,0FFH
+142C: 4820484C          
+1430: 01E5FF            
+                        
+                        	   
+1433: 5F524554          	.DB '_RET',1,0C9H,0FFH
+1437: 01C9FF            
+143A: 5F524554          	.DB '_RET C',1,0D8H,0FFH
+143E: 204301D8          
+1442: FF                
+1443: 5F524554          	.DB '_RET M',1,0F8H,0FFH
+1447: 204D01F8          
+144B: FF                
+144C: 5F524554          	.DB '_RET NC',1,0D0H,0FFH
+1450: 204E4301          
+1454: D0FF              
+1456: 5F524554          	.DB '_RET NZ',1,0C0H,0FFH
+145A: 204E5A01          
+145E: C0FF              
+1460: 5F524554          	.DB '_RET P',1,0F0H,0FFH
+1464: 205001F0          
+1468: FF                
+1469: 5F524554          	.DB '_RET PE',1,0E8H,0FFH
+146D: 20504501          
+1471: E8FF              
+1473: 5F524554          	.DB '_RET PO',1,0E0H,0FFH
+1477: 20504F01          
+147B: E0FF              
+147D: 5F524554          	.DB '_RET Z',1,0C8H,0FFH
+1481: 205A01C8          
+1485: FF                
+                        
+1486: 5F524C41          	.DB '_RLA',1,017H,0FFH
+148A: 0117FF            
+                        	   
+                        
+                        	   
+                        
+148D: 5F524C43          	.DB '_RLCA',1,007H,0FFH
+1491: 410107FF          
+1495: 5F525241          	.DB '_RRA',1,01FH,0FFH
+1499: 011FFF            
+                        
+149C: 5F525243          	.DB '_RRCA',1,00FH,0FFH
+14A0: 41010FFF          
+                        
+                           
+14A4: 5F525354          	.DB '_RST 00',1,0C7H,0FFH
+14A8: 20303001          
+14AC: C7FF              
+14AE: 5F525354          	.DB '_RST 08',1,0CFH,0FFH
+14B2: 20303801          
+14B6: CFFF              
+14B8: 5F525354          	.DB '_RST 10',1,0D7H,0FFH
+14BC: 20313001          
+14C0: D7FF              
+14C2: 5F525354          	.DB '_RST 18',1,0DFH,0FFH
+14C6: 20313801          
+14CA: DFFF              
+14CC: 5F525354          	.DB '_RST 20',1,0E7H,0FFH
+14D0: 20323001          
+14D4: E7FF              
+14D6: 5F525354          	.DB '_RST 28',1,0EFH,0FFH
+14DA: 20323801          
+14DE: EFFF              
+14E0: 5F525354          	.DB '_RST 30',1,0F7H,0FFH
+14E4: 20333001          
+14E8: F7FF              
+14EA: 5F525354          	.DB '_RST 38',1,0FFH,0FFH
+14EE: 20333801          
+14F2: FFFF              
+                        	   
+14F4: 5F534243          	.DB '_SBC A',2CH,'(HL)',1,09EH,0FFH
+14F8: 20412C28          
+14FC: 484C2901          
+1500: 9EFF              
+                        
+1502: 5F534243          	.DB '_SBC A',2CH,'A',1,09FH,0FFH
+1506: 20412C41          
+150A: 019FFF            
+150D: 5F534243          	.DB '_SBC A',2CH,'B',1,098H,0FFH
+1511: 20412C42          
+1515: 0198FF            
+1518: 5F534243          	.DB '_SBC A',2CH,'C',1,099H,0FFH
+151C: 20412C43          
+1520: 0199FF            
+1523: 5F534243          	.DB '_SBC A',2CH,'D',1,09AH,0FFH
+1527: 20412C44          
+152B: 019AFF            
+152E: 5F534243          	.DB '_SBC A',2CH,'E',1,09BH,0FFH
+1532: 20412C45          
+1536: 019BFF            
+1539: 5F534243          	.DB '_SBC A',2CH,'H',1,09CH,0FFH
+153D: 20412C48          
+1541: 019CFF            
+1544: 5F534243          	.DB '_SBC A',2CH,'L',1,09DH,0FFH
+1548: 20412C4C          
+154C: 019DFF            
+                        
+154F: 5F534243          	.DB '_SBC A',2CH,'#',1,0DEH,0FFH
+1553: 20412C23          
+1557: 01DEFF            
+                        	
+155A: 5F534346          	.DB '_SCF',1,037H,0FFH
+155E: 0137FF            
+                        	   
+                        
+                        	   	   
+                        
+                           
+1561: 5F535542          	.DB '_SUB (HL)',1,096H,0FFH
+1565: 2028484C          
+1569: 290196FF          
+                        
+156D: 5F535542          	.DB '_SUB A',1,097H,0FFH
+1571: 20410197          
+1575: FF                
+1576: 5F535542          	.DB '_SUB B',1,090H,0FFH
+157A: 20420190          
+157E: FF                
+157F: 5F535542          	.DB '_SUB C',1,091H,0FFH
+1583: 20430191          
+1587: FF                
+1588: 5F535542          	.DB '_SUB D',1,092H,0FFH
+158C: 20440192          
+1590: FF                
+1591: 5F535542          	.DB '_SUB E',1,093H,0FFH
+1595: 20450193          
+1599: FF                
+159A: 5F535542          	.DB '_SUB H',1,094H,0FFH
+159E: 20480194          
+15A2: FF                
+15A3: 5F535542          	.DB '_SUB L',1,095H,0FFH
+15A7: 204C0195          
+15AB: FF                
+15AC: 5F535542          	.DB '_SUB #',1,0D6H,0FFH
+15B0: 202301D6          
+15B4: FF                
+                        	   
+                        	   
+15B5: 5F584F52          	.DB '_XOR (HL)',1,0AEH,0FFH
+15B9: 2028484C          
+15BD: 2901AEFF          
+                        
+15C1: 5F584F52          	.DB '_XOR A',1,0AFH,0FFH
+15C5: 204101AF          
+15C9: FF                
+15CA: 5F584F52          	.DB '_XOR B',1,0A8H,0FFH
+15CE: 204201A8          
+15D2: FF                
+15D3: 5F584F52          	.DB '_XOR C',1,0A9H,0FFH
+15D7: 204301A9          
+15DB: FF                
+15DC: 5F584F52          	.DB '_XOR D',1,0AAH,0FFH
+15E0: 204401AA          
+15E4: FF                
+15E5: 5F584F52          	.DB '_XOR E',1,0ABH,0FFH
+15E9: 204501AB          
+15ED: FF                
+15EE: 5F584F52          	.DB '_XOR H',1,0ACH,0FFH
+15F2: 204801AC          
+15F6: FF                
+15F7: 5F584F52          	.DB '_XOR L',1,0ADH,0FFH
+15FB: 204C01AD          
+15FF: FF                
+1600: 5F584F52          	.DB '_XOR #',1,0EEH,0FFH
+1604: 202301EE          
+1608: FF                
+                        	
+1609:                   AFTERCOD:
+1609: 5F414443          	.DB '_ADC A',2CH,'(IX+#)',2,0DDH,08EH
+160D: 20412C28          
+1611: 49582B23          
+1615: 2902DD8E          
+1619: 5F414443          	.DB '_ADC A',2CH,'(IY+#)',2,0FDH,08EH
+161D: 20412C28          
+1621: 49592B23          
+1625: 2902FD8E          
+1629: 5F414443          	.DB '_ADC HL',2CH,'BC',2,0EDH,04AH
+162D: 20484C2C          
+1631: 424302ED          
+1635: 4A                
+1636: 5F414443          	.DB '_ADC HL',2CH,'DE',2,0EDH,05AH
+163A: 20484C2C          
+163E: 444502ED          
+1642: 5A                
+1643: 5F414443          	.DB '_ADC HL',2CH,'HL',2,0EDH,06AH
+1647: 20484C2C          
+164B: 484C02ED          
+164F: 6A                
+1650: 5F414443          	.DB '_ADC HL',2CH,'SP',2,0EDH,07AH
+1654: 20484C2C          
+1658: 535002ED          
+165C: 7A                
+165D: 5F414444          	.DB '_ADD A',2CH,'(IX+#)',2,0DDH,086H
+1661: 20412C28          
+1665: 49582B23          
+1669: 2902DD86          
+166D: 5F414444          	.DB '_ADD A',2CH,'(IY+#)',2,0FDH,086H
+1671: 20412C28          
+1675: 49592B23          
+1679: 2902FD86          
+167D: 5F414444          	.DB '_ADD IX',2CH,'BC',2,0DDH,009H
+1681: 2049582C          
+1685: 424302DD          
+1689: 09                
+168A: 5F414444          	.DB '_ADD IX',2CH,'DE',2,0DDH,019H
+168E: 2049582C          
+1692: 444502DD          
+1696: 19                
+1697: 5F414444          	.DB '_ADD IX',2CH,'IX',2,0DDH,029H
+169B: 2049582C          
+169F: 495802DD          
+16A3: 29                
+16A4: 5F414444          	.DB '_ADD IX',2CH,'SP',2,0DDH,039H
+16A8: 2049582C          
+16AC: 535002DD          
+16B0: 39                
+16B1: 5F414444          	.DB '_ADD IY',2CH,'BC',2,0FDH,009H
+16B5: 2049592C          
+16B9: 424302FD          
+16BD: 09                
+16BE: 5F414444          	.DB '_ADD IY',2CH,'DE',2,0FDH,019H
+16C2: 2049592C          
+16C6: 444502FD          
+16CA: 19                
+16CB: 5F414444          	.DB '_ADD IY',2CH,'IY',2,0FDH,029H
+16CF: 2049592C          
+16D3: 495902FD          
+16D7: 29                
+16D8: 5F414444          	.DB '_ADD IY',2CH,'SP',2,0FDH,039H
+16DC: 2049592C          
+16E0: 535002FD          
+16E4: 39                
+16E5: 5F414E44          	.DB '_AND (IX+#)',2,0DDH,0A6H
+16E9: 20284958          
+16ED: 2B232902          
+16F1: DDA6              
+16F3: 5F414E44          	.DB '_AND (IY+#)',2,0FDH,0A6H
+16F7: 20284959          
+16FB: 2B232902          
+16FF: FDA6              
+1701: 5F424954          	.DB '_BIT #',2CH,'(HL)',2,0CBH,046H
+1705: 20232C28          
+1709: 484C2902          
+170D: CB46              
+170F: 5F424954          	.DB '_BIT #',2CH,'A',2,0CBH,047H
+1713: 20232C41          
+1717: 02CB47            
+171A: 5F424954          	.DB '_BIT #',2CH,'B',2,0CBH,040H
+171E: 20232C42          
+1722: 02CB40            
+1725: 5F424954          	.DB '_BIT #',2CH,'C',2,0CBH,041H
+1729: 20232C43          
+172D: 02CB41            
+1730: 5F424954          	.DB '_BIT #',2CH,'D',2,0CBH,042H
+1734: 20232C44          
+1738: 02CB42            
+173B: 5F424954          	.DB '_BIT #',2CH,'E',2,0CBH,043H
+173F: 20232C45          
+1743: 02CB43            
+1746: 5F424954          	.DB '_BIT #',2CH,'H',2,0CBH,044H
+174A: 20232C48          
+174E: 02CB44            
+1751: 5F424954          	.DB '_BIT #',2CH,'L',2,0CBH,045H
+1755: 20232C4C          
+1759: 02CB45            
+175C: 5F435020          	.DB '_CP (IX+#)',2,0DDH,0BEH
+1760: 2849582B          
+1764: 232902DD          
+1768: BE                
+1769: 5F435020          	.DB '_CP (IY+#)',2,0FDH,0BEH
+176D: 2849592B          
+1771: 232902FD          
+1775: BE                
+1776: 5F435044          	.DB '_CPD',2,0EDH,0A9H	;BASLANGICI BENZER KOMUTLARDA TABLODA ONCE KISA OLAN OLMALI
+177A: 02EDA9            
+177D: 5F435044          	.DB '_CPDR',2,0EDH,0B9H
+1781: 5202EDB9          
+1785: 5F435049          	.DB '_CPI',2,0EDH,0A1H
+1789: 02EDA1            
+178C: 5F435049          	.DB '_CPIR',2,0EDH,0B1H
+1790: 5202EDB1          
+1794: 5F444543          	.DB '_DEC (IX+#)',2,0DDH,035H
+1798: 20284958          
+179C: 2B232902          
+17A0: DD35              
+17A2: 5F444543          	.DB '_DEC (IY+#)',2,0FDH,035H
+17A6: 20284959          
+17AA: 2B232902          
+17AE: FD35              
+17B0: 5F444543          	.DB '_DEC IX',2,0DDH,02BH
+17B4: 20495802          
+17B8: DD2B              
+17BA: 5F444543          	.DB '_DEC IY',2,0FDH,02BH
+17BE: 20495902          
+17C2: FD2B              
+                        
+17C4: 5F455820          	.DB '_EX (SP)',2CH,'IX',2,0DDH,0E3H
+17C8: 28535029          
+17CC: 2C495802          
+17D0: DDE3              
+17D2: 5F455820          	.DB '_EX (SP)',2CH,'IY',2,0FDH,0E3H
+17D6: 28535029          
+17DA: 2C495902          
+17DE: FDE3              
+                        
+17E0: 5F494D30          	.DB '_IM0',2,0EDH,046H
+17E4: 02ED46            
+17E7: 5F494D31          	.DB '_IM1',2,0EDH,056H
+17EB: 02ED56            
+17EE: 5F494D32          	.DB '_IM2',2,0EDH,05EH
+17F2: 02ED5E            
+17F5: 5F494E20          	.DB '_IN A',2CH,'(C)',2,0EDH,078H
+17F9: 412C2843          
+17FD: 2902ED78          
+1801: 5F494E20          	.DB '_IN B',2CH,'(C)',2,0EDH,040H
+1805: 422C2843          
+1809: 2902ED40          
+180D: 5F494E20          	.DB '_IN C',2CH,'(C)',2,0EDH,048H
+1811: 432C2843          
+1815: 2902ED48          
+1819: 5F494E20          	.DB '_IN D',2CH,'(C)',2,0EDH,050H
+181D: 442C2843          
+1821: 2902ED50          
+1825: 5F494E20          	.DB '_IN E',2CH,'(C)',2,0EDH,058H
+1829: 452C2843          
+182D: 2902ED58          
+1831: 5F494E20          	.DB '_IN H',2CH,'(C)',2,0EDH,060H
+1835: 482C2843          
+1839: 2902ED60          
+183D: 5F494E20          	.DB '_IN L',2CH,'(C)',2,0EDH,068H
+1841: 4C2C2843          
+1845: 2902ED68          
+1849: 5F494E43          	.DB '_INC (IX+#)',2,0DDH,034H
+184D: 20284958          
+1851: 2B232902          
+1855: DD34              
+1857: 5F494E43          	.DB '_INC (IY+#)',2,0FDH,034H
+185B: 20284959          
+185F: 2B232902          
+1863: FD34              
+1865: 5F494E44          	.DB '_IND',2,0EDH,0AAH
+1869: 02EDAA            
+186C: 5F494E44          	.DB '_INDR',2,0EDH,0BAH
+1870: 5202EDBA          
+1874: 5F494E49          	.DB '_INI',2,0EDH,0A2H
+1878: 02EDA2            
+187B: 5F494E49          	.DB '_INIR',2,0EDH,0B2H
+187F: 5202EDB2          
+1883: 5F494E43          	.DB '_INC IX',2,0DDH,023H
+1887: 20495802          
+188B: DD23              
+188D: 5F494E43          	.DB '_INC IY',2,0FDH,023H
+1891: 20495902          
+1895: FD23              
+                        	
+1897: 5F4A5020          	.DB '_JP (IX+#)',2,0DDH,0E9H
+189B: 2849582B          
+189F: 232902DD          
+18A3: E9                
+18A4: 5F4A5020          	.DB '_JP (IY+#)',2,0FDH,0E9H
+18A8: 2849592B          
+18AC: 232902FD          
+18B0: E9                
+                        	
+                        
+18B1: 5F4C4420          	.DB '_LD (IX+#)',2CH,'A',2,0DDH,077H
+18B5: 2849582B          
+18B9: 23292C41          
+18BD: 02DD77            
+18C0: 5F4C4420          	.DB '_LD (IX+#)',2CH,'B',2,0DDH,070H
+18C4: 2849582B          
+18C8: 23292C42          
+18CC: 02DD70            
+18CF: 5F4C4420          	.DB '_LD (IX+#)',2CH,'C',2,0DDH,071H
+18D3: 2849582B          
+18D7: 23292C43          
+18DB: 02DD71            
+18DE: 5F4C4420          	.DB '_LD (IX+#)',2CH,'D',2,0DDH,072H
+18E2: 2849582B          
+18E6: 23292C44          
+18EA: 02DD72            
+18ED: 5F4C4420          	.DB '_LD (IX+#)',2CH,'E',2,0DDH,073H
+18F1: 2849582B          
+18F5: 23292C45          
+18F9: 02DD73            
+18FC: 5F4C4420          	.DB '_LD (IX+#)',2CH,'H',2,0DDH,074H
+1900: 2849582B          
+1904: 23292C48          
+1908: 02DD74            
+190B: 5F4C4420          	.DB '_LD (IX+#)',2CH,'L',2,0DDH,075H
+190F: 2849582B          
+1913: 23292C4C          
+1917: 02DD75            
+191A: 5F4C4420          	.DB '_LD (IY+#)',2CH,'A',2,0FDH,077H
+191E: 2849592B          
+1922: 23292C41          
+1926: 02FD77            
+1929: 5F4C4420          	.DB '_LD (IY+#)',2CH,'B',2,0FDH,070H
+192D: 2849592B          
+1931: 23292C42          
+1935: 02FD70            
+1938: 5F4C4420          	.DB '_LD (IY+#)',2CH,'C',2,0FDH,071H
+193C: 2849592B          
+1940: 23292C43          
+1944: 02FD71            
+1947: 5F4C4420          	.DB '_LD (IY+#)',2CH,'D',2,0FDH,072H
+194B: 2849592B          
+194F: 23292C44          
+1953: 02FD72            
+1956: 5F4C4420          	.DB '_LD (IY+#)',2CH,'E',2,0FDH,073H
+195A: 2849592B          
+195E: 23292C45          
+1962: 02FD73            
+1965: 5F4C4420          	.DB '_LD (IY+#)',2CH,'H',2,0FDH,074H
+1969: 2849592B          
+196D: 23292C48          
+1971: 02FD74            
+1974: 5F4C4420          	.DB '_LD (IY+#)',2CH,'L',2,0FDH,075H
+1978: 2849592B          
+197C: 23292C4C          
+1980: 02FD75            
+1983: 5F4C4420          	.DB '_LD ($)',2CH,'BC',2,0EDH,043H
+1987: 2824292C          
+198B: 424302ED          
+198F: 43                
+1990: 5F4C4420          	.DB '_LD ($)',2CH,'DE',2,0EDH,053H
+1994: 2824292C          
+1998: 444502ED          
+199C: 53                
+199D: 5F4C4420          	.DB '_LD ($)',2CH,'IX',2,0DDH,022H
+19A1: 2824292C          
+19A5: 495802DD          
+19A9: 22                
+19AA: 5F4C4420          	.DB '_LD ($)',2CH,'IY',2,0FDH,022H
+19AE: 2824292C          
+19B2: 495902FD          
+19B6: 22                
+19B7: 5F4C4420          	.DB '_LD ($)',2CH,'SP',2,0EDH,073H
+19BB: 2824292C          
+19BF: 535002ED          
+19C3: 73                
+19C4: 5F4C4420          	.DB '_LD A',2CH,'(IX+#)',2,0DDH,07EH
+19C8: 412C2849          
+19CC: 582B2329          
+19D0: 02DD7E            
+19D3: 5F4C4420          	.DB '_LD A',2CH,'(IY+#)',2,0FDH,07EH
+19D7: 412C2849          
+19DB: 592B2329          
+19DF: 02FD7E            
+19E2: 5F4C4420          	.DB '_LD A',2CH,'I',2,0EDH,057H
+19E6: 412C4902          
+19EA: ED57              
+19EC: 5F4C4420          	.DB '_LD A',2CH,'R',2,0EDH,05FH
+19F0: 412C5202          
+19F4: ED5F              
+19F6: 5F4C4420          	.DB '_LD B',2CH,'(IX+#)',2,0DDH,046H
+19FA: 422C2849          
+19FE: 582B2329          
+1A02: 02DD46            
+1A05: 5F4C4420          	.DB '_LD B',2CH,'(IY+#)',2,0FDH,046H
+1A09: 422C2849          
+1A0D: 592B2329          
+1A11: 02FD46            
+1A14: 5F4C4420          	.DB '_LD BC',2CH,'($)',2,0EDH,04BH
+1A18: 42432C28          
+1A1C: 242902ED          
+1A20: 4B                
+1A21: 5F4C4420          	.DB '_LD C',2CH,'(IX+#)',2,0DDH,04EH
+1A25: 432C2849          
+1A29: 582B2329          
+1A2D: 02DD4E            
+1A30: 5F4C4420          	.DB '_LD C',2CH,'(IY+#)',2,0FDH,04EH
+1A34: 432C2849          
+1A38: 592B2329          
+1A3C: 02FD4E            
+1A3F: 5F4C4420          	.DB '_LD D',2CH,'(IX+#)',2,0DDH,056H
+1A43: 442C2849          
+1A47: 582B2329          
+1A4B: 02DD56            
+1A4E: 5F4C4420          	.DB '_LD D',2CH,'(IY+#)',2,0FDH,056H
+1A52: 442C2849          
+1A56: 592B2329          
+1A5A: 02FD56            
+1A5D: 5F4C4420          	.DB '_LD DE',2CH,'($)',2,0EDH,05BH
+1A61: 44452C28          
+1A65: 242902ED          
+1A69: 5B                
+1A6A: 5F4C4420          	.DB '_LD E',2CH,'(IX+#)',2,0DDH,05EH
+1A6E: 452C2849          
+1A72: 582B2329          
+1A76: 02DD5E            
+1A79: 5F4C4420          	.DB '_LD E',2CH,'(IY+#)',2,0FDH,05EH
+1A7D: 452C2849          
+1A81: 592B2329          
+1A85: 02FD5E            
+1A88: 5F4C4420          	.DB '_LD H',2CH,'(IX+#)',2,0DDH,066H
+1A8C: 482C2849          
+1A90: 582B2329          
+1A94: 02DD66            
+1A97: 5F4C4420          	.DB '_LD H',2CH,'(IY+#)',2,0FDH,066H
+1A9B: 482C2849          
+1A9F: 592B2329          
+1AA3: 02FD66            
+1AA6: 5F4C4420          	.DB '_LD I',2CH,'A',2,0EDH,047H
+1AAA: 492C4102          
+1AAE: ED47              
+1AB0: 5F4C4420          	.DB '_LD IX',2CH,'($)',2,0DDH,02AH
+1AB4: 49582C28          
+1AB8: 242902DD          
+1ABC: 2A                
+1ABD: 5F4C4420          	.DB '_LD IX',2CH,'$',2,0DDH,021H
+1AC1: 49582C24          
+1AC5: 02DD21            
+1AC8: 5F4C4420          	.DB '_LD IY',2CH,'($)',2,0FDH,02AH
+1ACC: 49592C28          
+1AD0: 242902FD          
+1AD4: 2A                
+1AD5: 5F4C4420          	.DB '_LD IY',2CH,'$',2,0FDH,021H
+1AD9: 49592C24          
+1ADD: 02FD21            
+1AE0: 5F4C4420          	.DB '_LD L',2CH,'(IX+#)',2,0DDH,06EH
+1AE4: 4C2C2849          
+1AE8: 582B2329          
+1AEC: 02DD6E            
+1AEF: 5F4C4420          	.DB '_LD L',2CH,'(IY+#)',2,0FDH,06EH
+1AF3: 4C2C2849          
+1AF7: 592B2329          
+1AFB: 02FD6E            
+1AFE: 5F4C4420          	.DB '_LD R',2CH,'A',2,0EDH,04FH
+1B02: 522C4102          
+1B06: ED4F              
+1B08: 5F4C4420          	.DB '_LD SP',2CH,'($)',2,0EDH,07BH
+1B0C: 53502C28          
+1B10: 242902ED          
+1B14: 7B                
+1B15: 5F4C4420          	.DB '_LD SP',2CH,'IX',2,0DDH,0F9H
+1B19: 53502C49          
+1B1D: 5802DDF9          
+1B21: 5F4C4420          	.DB '_LD SP',2CH,'IY',2,0FDH,0F9H
+1B25: 53502C49          
+1B29: 5902FDF9          
+1B2D: 5F4C4444          	.DB '_LDD',2,0EDH,0A8H
+1B31: 02EDA8            
+1B34: 5F4C4444          	.DB '_LDDR',2,0EDH,0B8H
+1B38: 5202EDB8          
+1B3C: 5F4C4449          	.DB '_LDI',2,0EDH,0A0H
+1B40: 02EDA0            
+1B43: 5F4C4449          	.DB '_LDIR',2,0EDH,0B0H
+1B47: 5202EDB0          
+1B4B: 5F4E4547          	.DB '_NEG',2,0EDH,044H
+1B4F: 02ED44            
+1B52: 5F4F5220          	.DB '_OR (IX+#)',2,0DDH,0B6H
+1B56: 2849582B          
+1B5A: 232902DD          
+1B5E: B6                
+1B5F: 5F4F5220          	.DB '_OR (IY+#)',2,0FDH,0B6H
+1B63: 2849592B          
+1B67: 232902FD          
+1B6B: B6                
+1B6C: 5F4F5444          	.DB '_OTDR',2,0EDH,0BBH
+1B70: 5202EDBB          
+1B74: 5F4F5449          	.DB '_OTIR',2,0EDH,0B3H
+1B78: 5202EDB3          
+                        	   
+1B7C: 5F4F5554          	.DB '_OUT (C)',2CH,'A',2,0EDH,079H
+1B80: 20284329          
+1B84: 2C4102ED          
+1B88: 79                
+1B89: 5F4F5554          	.DB '_OUT (C)',2CH,'B',2,0EDH,041H
+1B8D: 20284329          
+1B91: 2C4202ED          
+1B95: 41                
+1B96: 5F4F5554          	.DB '_OUT (C)',2CH,'C',2,0EDH,049H
+1B9A: 20284329          
+1B9E: 2C4302ED          
+1BA2: 49                
+1BA3: 5F4F5554          	.DB '_OUT (C)',2CH,'D',2,0EDH,051H
+1BA7: 20284329          
+1BAB: 2C4402ED          
+1BAF: 51                
+1BB0: 5F4F5554          	.DB '_OUT (C)',2CH,'E',2,0EDH,059H
+1BB4: 20284329          
+1BB8: 2C4502ED          
+1BBC: 59                
+1BBD: 5F4F5554          	.DB '_OUT (C)',2CH,'H',2,0EDH,061H
+1BC1: 20284329          
+1BC5: 2C4802ED          
+1BC9: 61                
+1BCA: 5F4F5554          	.DB '_OUT (C)',2CH,'L',2,0EDH,069H
+1BCE: 20284329          
+1BD2: 2C4C02ED          
+1BD6: 69                
+1BD7: 5F4F5554          	.DB '_OUTD',2,0EDH,0ABH
+1BDB: 4402EDAB          
+1BDF: 5F4F5554          	.DB '_OUTI',2,0EDH,0A3H
+1BE3: 4902EDA3          
+1BE7: 5F504F50          	.DB '_POP IX',2,0DDH,0E1H
+1BEB: 20495802          
+1BEF: DDE1              
+1BF1: 5F504F50          	.DB '_POP IY',2,0FDH,0E1H
+1BF5: 20495902          
+1BF9: FDE1              
+1BFB: 5F505553          	.DB '_PUSH IX',2,0DDH,0E5H
+1BFF: 48204958          
+1C03: 02DDE5            
+1C06: 5F505553          	.DB '_PUSH IY',2,0FDH,0E5H
+1C0A: 48204959          
+1C0E: 02FDE5            
+                        	   
+1C11: 5F524553          	.DB '_RES #',2CH,'(HL)',2,0CBH,086H
+1C15: 20232C28          
+1C19: 484C2902          
+1C1D: CB86              
+                        ;	.DB '_RES #',2CH,'(IX+#)',2,0DDH,0CBH
+                        ;	.DB '_RES #',2CH,'(IY+#)',2,0FDH,0CBH
+1C1F: 5F524553          	.DB '_RES #',2CH,'A',2,0CBH,087H
+1C23: 20232C41          
+1C27: 02CB87            
+1C2A: 5F524553          	.DB '_RES #',2CH,'B',2,0CBH,080H
+1C2E: 20232C42          
+1C32: 02CB80            
+1C35: 5F524553          	.DB '_RES #',2CH,'C',2,0CBH,081H
+1C39: 20232C43          
+1C3D: 02CB81            
+1C40: 5F524553          	.DB '_RES #',2CH,'D',2,0CBH,082H
+1C44: 20232C44          
+1C48: 02CB82            
+1C4B: 5F524553          	.DB '_RES #',2CH,'E',2,0CBH,083H
+1C4F: 20232C45          
+1C53: 02CB83            
+1C56: 5F524553          	.DB '_RES #',2CH,'H',2,0CBH,084H
+1C5A: 20232C48          
+1C5E: 02CB84            
+1C61: 5F524553          	.DB '_RES #',2CH,'L',2,0CBH,085H
+1C65: 20232C4C          
+1C69: 02CB85            
+1C6C: 5F524554          	.DB '_RETI',2,0EDH,04DH
+1C70: 4902ED4D          
+1C74: 5F524554          	.DB '_RETN',2,0EDH,045H
+1C78: 4E02ED45          
+                        	   
+1C7C: 5F524C20          	.DB '_RL (HL)',2,0CBH,016H
+1C80: 28484C29          
+1C84: 02CB16            
+                        ;	.DB '_RL (IX+#)',2,0DDH,0CBH
+                        ;	.DB '_RL (IY+#)',2,0FDH,0CBH
+1C87: 5F524C20          	.DB '_RL A',2,0CBH,017H
+1C8B: 4102CB17          
+1C8F: 5F524C20          	.DB '_RL B',2,0CBH,010H
+1C93: 4202CB10          
+1C97: 5F524C20          	.DB '_RL C',2,0CBH,011H
+1C9B: 4302CB11          
+1C9F: 5F524C20          	.DB '_RL D',2,0CBH,012H
+1CA3: 4402CB12          
+1CA7: 5F524C20          	.DB '_RL E',2,0CBH,013H
+1CAB: 4502CB13          
+1CAF: 5F524C20          	.DB '_RL H',2,0CBH,014H
+1CB3: 4802CB14          
+1CB7: 5F524C20          	.DB '_RL L',2,0CBH,015H
+1CBB: 4C02CB15          
+1CBF: 5F524C43          	.DB '_RLC (HL)',2,0CBH,006H
+1CC3: 2028484C          
+1CC7: 2902CB06          
+                        ;	.DB '_RLC (IX+#)',2,0DDH,0CBH
+                        ;	.DB '_RLC (IY+#)',2,0FDH,0CBH
+1CCB: 5F524C43          	.DB '_RLC A',2,0CBH,007H
+1CCF: 204102CB          
+1CD3: 07                
+1CD4: 5F524C43          	.DB '_RLC B',2,0CBH,000H
+1CD8: 204202CB          
+1CDC: 00                
+1CDD: 5F524C43          	.DB '_RLC C',2,0CBH,001H
+1CE1: 204302CB          
+1CE5: 01                
+1CE6: 5F524C43          	.DB '_RLC D',2,0CBH,002H
+1CEA: 204402CB          
+1CEE: 02                
+1CEF: 5F524C43          	.DB '_RLC E',2,0CBH,003H
+1CF3: 204502CB          
+1CF7: 03                
+1CF8: 5F524C43          	.DB '_RLC H',2,0CBH,004H
+1CFC: 204802CB          
+1D00: 04                
+1D01: 5F524C43          	.DB '_RLC L',2,0CBH,005H
+1D05: 204C02CB          
+1D09: 05                
+1D0A: 5F524C44          	.DB '_RLD',2,0EDH,06FH
+1D0E: 02ED6F            
+1D11: 5F525244          	.DB '_RRD',2,0EDH,067H
+1D15: 02ED67            
+1D18: 5F525220          	.DB '_RR (HL)',2,0CBH,01EH
+1D1C: 28484C29          
+1D20: 02CB1E            
+                        ;	.DB '_RR (IX+#)',2,0DDH,0CBH
+                        ;	.DB '_RR (IY+#)',2,0FDH,0CBH
+1D23: 5F525220          	.DB '_RR A',2,0CBH,01FH
+1D27: 4102CB1F          
+1D2B: 5F525220          	.DB '_RR B',2,0CBH,018H
+1D2F: 4202CB18          
+1D33: 5F525220          	.DB '_RR C',2,0CBH,019H
+1D37: 4302CB19          
+1D3B: 5F525220          	.DB '_RR D',2,0CBH,01AH
+1D3F: 4402CB1A          
+1D43: 5F525220          	.DB '_RR E',2,0CBH,01BH
+1D47: 4502CB1B          
+1D4B: 5F525220          	.DB '_RR H',2,0CBH,01CH
+1D4F: 4802CB1C          
+1D53: 5F525220          	.DB '_RR L',2,0CBH,01DH
+1D57: 4C02CB1D          
+1D5B: 5F525243          	.DB '_RRC (HL)',2,0CBH,00EH
+1D5F: 2028484C          
+1D63: 2902CB0E          
+                        ;	.DB '_RRC (IX+#)',2,0DDH,0CBH
+                        ;	.DB '_RRC (IY+#)',2,0FDH,0CBH
+1D67: 5F525243          	.DB '_RRC A',2,0CBH,00FH
+1D6B: 204102CB          
+1D6F: 0F                
+1D70: 5F525243          	.DB '_RRC B',2,0CBH,008H
+1D74: 204202CB          
+1D78: 08                
+1D79: 5F525243          	.DB '_RRC C',2,0CBH,009H
+1D7D: 204302CB          
+1D81: 09                
+1D82: 5F525243          	.DB '_RRC D',2,0CBH,00AH
+1D86: 204402CB          
+1D8A: 0A                
+1D8B: 5F525243          	.DB '_RRC E',2,0CBH,00BH
+1D8F: 204502CB          
+1D93: 0B                
+1D94: 5F525243          	.DB '_RRC H',2,0CBH,00CH
+1D98: 204802CB          
+1D9C: 0C                
+1D9D: 5F525243          	.DB '_RRC L',2,0CBH,00DH
+1DA1: 204C02CB          
+1DA5: 0D                
+                        	
+1DA6: 5F534243          	.DB '_SBC A',2CH,'(IX+#)',2,0DDH,09EH
+1DAA: 20412C28          
+1DAE: 49582B23          
+1DB2: 2902DD9E          
+1DB6: 5F534243          	.DB '_SBC A',2CH,'(IY+#)',2,0FDH,09EH
+1DBA: 20412C28          
+1DBE: 49592B23          
+1DC2: 2902FD9E          
+1DC6: 5F534243          	.DB '_SBC HL',2CH,'BC',2,0EDH,042H
+1DCA: 20484C2C          
+1DCE: 424302ED          
+1DD2: 42                
+1DD3: 5F534243          	.DB '_SBC HL',2CH,'DE',2,0EDH,052H
+1DD7: 20484C2C          
+1DDB: 444502ED          
+1DDF: 52                
+1DE0: 5F534243          	.DB '_SBC HL',2CH,'HL',2,0EDH,062H
+1DE4: 20484C2C          
+1DE8: 484C02ED          
+1DEC: 62                
+1DED: 5F534243          	.DB '_SBC HL',2CH,'SP',2,0EDH,072H
+1DF1: 20484C2C          
+1DF5: 535002ED          
+1DF9: 72                
+1DFA: 5F534554          	.DB '_SET #',2CH,'(HL)',2,0CBH,0C6H
+1DFE: 20232C28          
+1E02: 484C2902          
+1E06: CBC6              
+                        ;	.DB '_SET #',2CH,'(IX+#)',2,0DDH,0CBH
+                        ;	.DB '_SET #',2CH,'(IY+#)',2,0FDH,0CBH
+1E08: 5F534554          	.DB '_SET #',2CH,'A',2,0CBH,0C7H
+1E0C: 20232C41          
+1E10: 02CBC7            
+1E13: 5F534554          	.DB '_SET #',2CH,'B',2,0CBH,0C0H
+1E17: 20232C42          
+1E1B: 02CBC0            
+1E1E: 5F534554          	.DB '_SET #',2CH,'C',2,0CBH,0C1H
+1E22: 20232C43          
+1E26: 02CBC1            
+1E29: 5F534554          	.DB '_SET #',2CH,'D',2,0CBH,0C2H
+1E2D: 20232C44          
+1E31: 02CBC2            
+1E34: 5F534554          	.DB '_SET #',2CH,'E',2,0CBH,0C3H
+1E38: 20232C45          
+1E3C: 02CBC3            
+1E3F: 5F534554          	.DB '_SET #',2CH,'H',2,0CBH,0C4H
+1E43: 20232C48          
+1E47: 02CBC4            
+1E4A: 5F534554          	.DB '_SET #',2CH,'L',2,0CBH,0C5H
+1E4E: 20232C4C          
+1E52: 02CBC5            
+                           
+1E55: 5F534C41          	.DB '_SLA (HL)',2,0CBH,026H
+1E59: 2028484C          
+1E5D: 2902CB26          
+                        ;	.DB '_SLA (IX+#)',2,0DDH,0CBH
+                        ;	.DB '_SLA (IY+#)',2,0FDH,0CBH
+1E61: 5F534C41          	.DB '_SLA A',2,0CBH,027H
+1E65: 204102CB          
+1E69: 27                
+1E6A: 5F534C41          	.DB '_SLA B',2,0CBH,020H
+1E6E: 204202CB          
+1E72: 20                
+1E73: 5F534C41          	.DB '_SLA C',2,0CBH,021H
+1E77: 204302CB          
+1E7B: 21                
+1E7C: 5F534C41          	.DB '_SLA D',2,0CBH,022H
+1E80: 204402CB          
+1E84: 22                
+1E85: 5F534C41          	.DB '_SLA E',2,0CBH,023H
+1E89: 204502CB          
+1E8D: 23                
+1E8E: 5F534C41          	.DB '_SLA H',2,0CBH,024H
+1E92: 204802CB          
+1E96: 24                
+1E97: 5F534C41          	.DB '_SLA L',2,0CBH,025H
+1E9B: 204C02CB          
+1E9F: 25                
+1EA0: 5F535241          	.DB '_SRA (HL)',2,0CBH,02EH
+1EA4: 2028484C          
+1EA8: 2902CB2E          
+                        ;	.DB '_SRA (IX+#)',2,0DDH,0CBH
+                        ;	.DB '_SRA (IY+#)',2,0FDH,0CBH
+1EAC: 5F535241          	.DB '_SRA A',2,0CBH,02FH
+1EB0: 204102CB          
+1EB4: 2F                
+1EB5: 5F535241          	.DB '_SRA B',2,0CBH,028H
+1EB9: 204202CB          
+1EBD: 28                
+1EBE: 5F535241          	.DB '_SRA C',2,0CBH,029H
+1EC2: 204302CB          
+1EC6: 29                
+1EC7: 5F535241          	.DB '_SRA D',2,0CBH,02AH
+1ECB: 204402CB          
+1ECF: 2A                
+1ED0: 5F535241          	.DB '_SRA E',2,0CBH,02BH
+1ED4: 204502CB          
+1ED8: 2B                
+1ED9: 5F535241          	.DB '_SRA H',2,0CBH,02CH
+1EDD: 204802CB          
+1EE1: 2C                
+1EE2: 5F535241          	.DB '_SRA L',2,0CBH,02DH
+1EE6: 204C02CB          
+1EEA: 2D                
+                        	   
+1EEB: 5F53524C          	.DB '_SRL (HL)',2,0CBH,03EH
+1EEF: 2028484C          
+1EF3: 2902CB3E          
+                        ;	.DB '_SRL (IX+#)',2,0DDH,0CBH
+                        ;	.DB '_SRL (IY+#)',2,0FDH,0CBH
+1EF7: 5F53524C          	.DB '_SRL A',2,0CBH,03FH
+1EFB: 204102CB          
+1EFF: 3F                
+1F00: 5F53524C          	.DB '_SRL B',2,0CBH,038H
+1F04: 204202CB          
+1F08: 38                
+1F09: 5F53524C          	.DB '_SRL C',2,0CBH,039H
+1F0D: 204302CB          
+1F11: 39                
+1F12: 5F53524C          	.DB '_SRL D',2,0CBH,03AH
+1F16: 204402CB          
+1F1A: 3A                
+1F1B: 5F53524C          	.DB '_SRL E',2,0CBH,03BH
+1F1F: 204502CB          
+1F23: 3B                
+1F24: 5F53524C          	.DB '_SRL H',2,0CBH,03CH
+1F28: 204802CB          
+1F2C: 3C                
+1F2D: 5F53524C          	.DB '_SRL L',2,0CBH,03DH
+1F31: 204C02CB          
+1F35: 3D                
+1F36: 5F535542          	.DB '_SUB (IX+#)',2,0DDH,096H
+1F3A: 20284958          
+1F3E: 2B232902          
+1F42: DD96              
+1F44: 5F535542          	.DB '_SUB (IY+#)',2,0FDH,096H
+1F48: 20284959          
+1F4C: 2B232902          
+1F50: FD96              
+                        
+1F52: 5F584F52          	.DB '_XOR (IX+#)',2,0DDH,0AEH
+1F56: 20284958          
+1F5A: 2B232902          
+1F5E: DDAE              
+1F60: 5F584F52          	.DB '_XOR (IY+#)',2,0FDH,0AEH
+1F64: 20284959          
+1F68: 2B232902          
+1F6C: FDAE              
+                        
+1F6E: 00000000          	.DB 0,0,0,0,0,0,0,0
+1F72: 00000000          
+1F76: 00000000          	.DB 0,0,0,0,0,0,0,0
+1F7A: 00000000          
+1F7E: 00000000          CODEND:	.DB 0,0,0,0,0,0,0,0
+1F82: 00000000          
+1F86: 00000000          	.DB 0,0,0,0,0,0,0,0
+1F8A: 00000000          
+                        
+                        
+                        	
+                        	
+                        	
+                        
+                        	
+                        		
+                        	.END
+
+
+; +++ segments +++
+
+#CODE          = $0000 =     0,  size = $1F8E =  8078
+
+; +++ global symbols +++
+
+ADRSINP      = $FF43 = 65347          Assembler-V1_0-8K-AS_ROM.asm:43
+AFTER        = $0522 =  1314          Assembler-V1_0-8K-AS_ROM.asm:1050
+AFTERCOD     = $1609 =  5641          Assembler-V1_0-8K-AS_ROM.asm:2494
+ASADCODE     = $FFA6 = 65446          Assembler-V1_0-8K-AS_ROM.asm:39
+ASADR        = $FFA4 = 65444          Assembler-V1_0-8K-AS_ROM.asm:38
+ASKDIS       = $049B =  1179          Assembler-V1_0-8K-AS_ROM.asm:974 (unused)
+ASSEMBLE     = $024B =   587          Assembler-V1_0-8K-AS_ROM.asm:519
+ASS_ADR      = $0255 =   597          Assembler-V1_0-8K-AS_ROM.asm:525 (unused)
+AS_DON       = $0289 =   649          Assembler-V1_0-8K-AS_ROM.asm:556
+AS_DON2      = $028E =   654          Assembler-V1_0-8K-AS_ROM.asm:558 (unused)
+BITTI        = $02EE =   750          Assembler-V1_0-8K-AS_ROM.asm:614
+BYTEIN1      = $0811 =  2065          Assembler-V1_0-8K-AS_ROM.asm:1541
+BYTEIN2      = $07E8 =  2024          Assembler-V1_0-8K-AS_ROM.asm:1515
+BYTEINP1     = $039A =   922          Assembler-V1_0-8K-AS_ROM.asm:782
+BYTEINP2     = $03A1 =   929          Assembler-V1_0-8K-AS_ROM.asm:787
+BYTERD       = $09A2 =  2466          Assembler-V1_0-8K-AS_ROM.asm:1843
+BYTERDR      = $091C =  2332          Assembler-V1_0-8K-AS_ROM.asm:1737
+CHECKHEX     = $0855 =  2133          Assembler-V1_0-8K-AS_ROM.asm:1597
+CHECKHEX2    = $083A =  2106          Assembler-V1_0-8K-AS_ROM.asm:1572
+CHECKINDEX   = $0517 =  1303          Assembler-V1_0-8K-AS_ROM.asm:1041
+CIKIS        = $0236 =   566          Assembler-V1_0-8K-AS_ROM.asm:497
+CLRBUF       = $03A8 =   936          Assembler-V1_0-8K-AS_ROM.asm:794
+CODEBUF      = $FF80 = 65408          Assembler-V1_0-8K-AS_ROM.asm:35
+CODEBUFLEN   = $FFB3 = 65459          Assembler-V1_0-8K-AS_ROM.asm:44
+CODEND       = $1F7E =  8062          Assembler-V1_0-8K-AS_ROM.asm:2740
+COMINBUF     = $FF60 = 65376          Assembler-V1_0-8K-AS_ROM.asm:34
+COMP         = $09D0 =  2512          Assembler-V1_0-8K-AS_ROM.asm:1882
+CONTDS       = $0478 =  1144          Assembler-V1_0-8K-AS_ROM.asm:959
+DATAIN       = $0998 =  2456          Assembler-V1_0-8K-AS_ROM.asm:1835
+DATAINP      = $FF42 = 65346          Assembler-V1_0-8K-AS_ROM.asm:42
+DE_LAY       = $01AF =   431          Assembler-V1_0-8K-AS_ROM.asm:394
+DIS21        = $00D0 =   208          Assembler-V1_0-8K-AS_ROM.asm:244
+DIS25        = $07F1 =  2033          Assembler-V1_0-8K-AS_ROM.asm:1522
+DIS26        = $081A =  2074          Assembler-V1_0-8K-AS_ROM.asm:1548
+DIS30        = $03AD =   941          Assembler-V1_0-8K-AS_ROM.asm:796
+DIS32        = $02B7 =   695          Assembler-V1_0-8K-AS_ROM.asm:583
+DIS45        = $05B2 =  1458          Assembler-V1_0-8K-AS_ROM.asm:1157
+DIS46        = $0601 =  1537          Assembler-V1_0-8K-AS_ROM.asm:1210
+DIS50        = $060F =  1551          Assembler-V1_0-8K-AS_ROM.asm:1216
+DIS51        = $05C3 =  1475          Assembler-V1_0-8K-AS_ROM.asm:1166
+DISADDR      = $FFD0 = 65488          Assembler-V1_0-8K-AS_ROM.asm:929
+DISASSEMBLER = $0451 =  1105          Assembler-V1_0-8K-AS_ROM.asm:927
+DISCB        = $03B8 =   952          Assembler-V1_0-8K-AS_ROM.asm:804
+DISCODELEN   = $FFC2 = 65474          Assembler-V1_0-8K-AS_ROM.asm:931
+DISDELAY     = $01B3 =   435          Assembler-V1_0-8K-AS_ROM.asm:398
+DISDIYEZ     = $0640 =  1600          Assembler-V1_0-8K-AS_ROM.asm:1251
+DISDOLAR     = $0656 =  1622          Assembler-V1_0-8K-AS_ROM.asm:1263
+DISDS        = $0456 =  1110          Assembler-V1_0-8K-AS_ROM.asm:946
+DISEND       = $0A0D =  2573          Assembler-V1_0-8K-AS_ROM.asm:1917
+DISERR       = $0437 =  1079          Assembler-V1_0-8K-AS_ROM.asm:892
+DISFINDAD    = $FFD2 = 65490          Assembler-V1_0-8K-AS_ROM.asm:930
+DISIN        = $0314 =   788          Assembler-V1_0-8K-AS_ROM.asm:676
+DISPROC      = $05C9 =  1481          Assembler-V1_0-8K-AS_ROM.asm:1175 (unused)
+DISTOTLEN    = $FFC4 = 65476          Assembler-V1_0-8K-AS_ROM.asm:932 (unused)
+DISYAZ       = $037D =   893          Assembler-V1_0-8K-AS_ROM.asm:747
+DIYEZ1       = $0386 =   902          Assembler-V1_0-8K-AS_ROM.asm:759
+DIYEZDOLAR   = $FFB2 = 65458          Assembler-V1_0-8K-AS_ROM.asm:41
+DOLLAR1      = $038D =   909          Assembler-V1_0-8K-AS_ROM.asm:766
+DONDIS       = $04FA =  1274          Assembler-V1_0-8K-AS_ROM.asm:1021
+DONDISX      = $04E7 =  1255          Assembler-V1_0-8K-AS_ROM.asm:1012
+DONDISY      = $04CA =  1226          Assembler-V1_0-8K-AS_ROM.asm:999
+DONDISZ      = $04C5 =  1221          Assembler-V1_0-8K-AS_ROM.asm:995
+DONE         = $0632 =  1586          Assembler-V1_0-8K-AS_ROM.asm:1243
+DONEDIT      = $088B =  2187          Assembler-V1_0-8K-AS_ROM.asm:1640
+DONGU        = $09E6 =  2534          Assembler-V1_0-8K-AS_ROM.asm:1895
+DONGU1       = $09E8 =  2536          Assembler-V1_0-8K-AS_ROM.asm:1896
+DONGUX       = $01E4 =   484          Assembler-V1_0-8K-AS_ROM.asm:452
+DONGUY       = $01E1 =   481          Assembler-V1_0-8K-AS_ROM.asm:451
+DONHEXX      = $085D =  2141          Assembler-V1_0-8K-AS_ROM.asm:1603
+DONHEXX2     = $0842 =  2114          Assembler-V1_0-8K-AS_ROM.asm:1578
+DUMBP        = $0207 =   519          Assembler-V1_0-8K-AS_ROM.asm:470
+DUMBP2       = $0224 =   548          Assembler-V1_0-8K-AS_ROM.asm:485
+DVM1         = $0514 =  1300          Assembler-V1_0-8K-AS_ROM.asm:1038
+EDIT         = $0870 =  2160          Assembler-V1_0-8K-AS_ROM.asm:1626
+EDITADR      = $F906 = 63750          Assembler-V1_0-8K-AS_ROM.asm:56
+EDITNEXT     = $08CF =  2255          Assembler-V1_0-8K-AS_ROM.asm:1680
+ENDCONTROL   = $0428 =  1064          Assembler-V1_0-8K-AS_ROM.asm:885
+ENDCONTROLD  = $055D =  1373          Assembler-V1_0-8K-AS_ROM.asm:1096
+ERROR        = $0443 =  1091          Assembler-V1_0-8K-AS_ROM.asm:901
+FILL         = $0706 =  1798          Assembler-V1_0-8K-AS_ROM.asm:1373
+FILL_BYTE    = $0746 =  1862          Assembler-V1_0-8K-AS_ROM.asm:1420
+FILL_DT      = $0736 =  1846          Assembler-V1_0-8K-AS_ROM.asm:1411
+FILL_SR      = $0727 =  1831          Assembler-V1_0-8K-AS_ROM.asm:1402
+FINDCOM      = $03E1 =   993          Assembler-V1_0-8K-AS_ROM.asm:830
+FOUND        = $0420 =  1056          Assembler-V1_0-8K-AS_ROM.asm:878
+FOUNDD       = $0593 =  1427          Assembler-V1_0-8K-AS_ROM.asm:1128
+FOUNDDIS     = $0599 =  1433          Assembler-V1_0-8K-AS_ROM.asm:1139
+GO_ON        = $0992 =  2450          Assembler-V1_0-8K-AS_ROM.asm:1830
+GREET        = $006A =   106          Assembler-V1_0-8K-AS_ROM.asm:176
+HATALI       = $02DA =   730          Assembler-V1_0-8K-AS_ROM.asm:603
+HELP         = $00CA =   202          Assembler-V1_0-8K-AS_ROM.asm:241
+HELP1        = $00EF =   239          Assembler-V1_0-8K-AS_ROM.asm:280 (unused)
+HEXAS        = $0A56 =  2646          Assembler-V1_0-8K-AS_ROM.asm:1982
+HEXCON       = $09AC =  2476          Assembler-V1_0-8K-AS_ROM.asm:1850
+HEXCON2      = $07FC =  2044          Assembler-V1_0-8K-AS_ROM.asm:1526
+HEXCON3      = $0825 =  2085          Assembler-V1_0-8K-AS_ROM.asm:1553
+HEXCONR      = $0926 =  2342          Assembler-V1_0-8K-AS_ROM.asm:1746
+HEXDUMP      = $01C2 =   450          Assembler-V1_0-8K-AS_ROM.asm:422
+HEXLDREG     = $FF4B = 65355          Assembler-V1_0-8K-AS_ROM.asm:50
+HEXOUT       = $0A37 =  2615          Assembler-V1_0-8K-AS_ROM.asm:1956
+HIGHNIBBLE   = $FF33 = 65331          Assembler-V1_0-8K-AS_ROM.asm:54
+INIT8251     = $0010 =    16          Assembler-V1_0-8K-AS_ROM.asm:94 (unused)
+INIT8255     = $000C =    12          Assembler-V1_0-8K-AS_ROM.asm:91 (unused)
+INLIN2       = $0911 =  2321          Assembler-V1_0-8K-AS_ROM.asm:1730
+INTADRS      = $F908 = 63752          Assembler-V1_0-8K-AS_ROM.asm:58
+INTERPRET    = $02FC =   764          Assembler-V1_0-8K-AS_ROM.asm:656
+INTLIN       = $096C =  2412          Assembler-V1_0-8K-AS_ROM.asm:1811
+INTLIN1      = $0967 =  2407          Assembler-V1_0-8K-AS_ROM.asm:1808
+INTLINR      = $0907 =  2311          Assembler-V1_0-8K-AS_ROM.asm:1724
+INTSAVE      = $09B9 =  2489          Assembler-V1_0-8K-AS_ROM.asm:1867
+ISTEBU       = $035B =   859          Assembler-V1_0-8K-AS_ROM.asm:721
+KEYINBUF     = $FF20 = 65312          Assembler-V1_0-8K-AS_ROM.asm:46
+KEYINRES     = $FF40 = 65344          Assembler-V1_0-8K-AS_ROM.asm:47
+LINELENGHT   = $FFA0 = 65440          Assembler-V1_0-8K-AS_ROM.asm:36
+LOADERZ      = $0932 =  2354          Assembler-V1_0-8K-AS_ROM.asm:1765
+LOADSTADR    = $FF50 = 65360          Assembler-V1_0-8K-AS_ROM.asm:51
+LOAD_ED      = $093D =  2365          Assembler-V1_0-8K-AS_ROM.asm:1775 (unused)
+LOOPC        = $03F5 =  1013          Assembler-V1_0-8K-AS_ROM.asm:842
+LOOPCD       = $0532 =  1330          Assembler-V1_0-8K-AS_ROM.asm:1059
+LOOPF        = $03EB =  1003          Assembler-V1_0-8K-AS_ROM.asm:838
+LOOPFD       = $0528 =  1320          Assembler-V1_0-8K-AS_ROM.asm:1055
+LOP15        = $067F =  1663          Assembler-V1_0-8K-AS_ROM.asm:1300
+LOP15F       = $0713 =  1811          Assembler-V1_0-8K-AS_ROM.asm:1386
+LOPTR        = $004C =    76          Assembler-V1_0-8K-AS_ROM.asm:154
+LOPTX        = $003D =    61          Assembler-V1_0-8K-AS_ROM.asm:139
+LOWNIBBLE    = $FF32 = 65330          Assembler-V1_0-8K-AS_ROM.asm:53
+MA_IN        = $0072 =   114          Assembler-V1_0-8K-AS_ROM.asm:191
+MINIMUS      = $09E2 =  2530          Assembler-V1_0-8K-AS_ROM.asm:1892
+MINUS        = $09D9 =  2521          Assembler-V1_0-8K-AS_ROM.asm:1887
+MNELEN       = $FFDA = 65498          Assembler-V1_0-8K-AS_ROM.asm:936
+MNENDAD      = $FFD6 = 65494          Assembler-V1_0-8K-AS_ROM.asm:934
+MNESTAD      = $FFD4 = 65492          Assembler-V1_0-8K-AS_ROM.asm:933
+MOVE         = $0672 =  1650          Assembler-V1_0-8K-AS_ROM.asm:1287
+MOVE_DT      = $06A3 =  1699          Assembler-V1_0-8K-AS_ROM.asm:1326
+MOVE_LNT     = $06B3 =  1715          Assembler-V1_0-8K-AS_ROM.asm:1336
+MOVE_SR      = $0694 =  1684          Assembler-V1_0-8K-AS_ROM.asm:1317
+NALPHA       = $09B7 =  2487          Assembler-V1_0-8K-AS_ROM.asm:1855
+NALPHAR      = $0930 =  2352          Assembler-V1_0-8K-AS_ROM.asm:1757
+NEXTCODE     = $F900 = 63744          Assembler-V1_0-8K-AS_ROM.asm:937
+NOTFOUND     = $0405 =  1029          Assembler-V1_0-8K-AS_ROM.asm:854
+NOTFOUNDD    = $0542 =  1346          Assembler-V1_0-8K-AS_ROM.asm:1071
+NOTHEX       = $0864 =  2148          Assembler-V1_0-8K-AS_ROM.asm:1609 (unused)
+NOTHEX2      = $0849 =  2121          Assembler-V1_0-8K-AS_ROM.asm:1584 (unused)
+OKHEX        = $086A =  2154          Assembler-V1_0-8K-AS_ROM.asm:1615
+OKHEX2       = $084F =  2127          Assembler-V1_0-8K-AS_ROM.asm:1590
+OPBYTECNT    = $FFB0 = 65456          Assembler-V1_0-8K-AS_ROM.asm:40
+OPCNT        = $FFE0 = 65504          Assembler-V1_0-8K-AS_ROM.asm:939
+OPERAND      = $FFD8 = 65496          Assembler-V1_0-8K-AS_ROM.asm:935
+PRINT        = $01BA =   442          Assembler-V1_0-8K-AS_ROM.asm:410
+PROMPT       = $00C1 =   193          Assembler-V1_0-8K-AS_ROM.asm:228
+RUN_ADR      = $08E7 =  2279          Assembler-V1_0-8K-AS_ROM.asm:1706
+RXD          = $0048 =    72          Assembler-V1_0-8K-AS_ROM.asm:150
+SAVECHCK     = $FF34 = 65332          Assembler-V1_0-8K-AS_ROM.asm:52
+SAVEX        = $079E =  1950          Assembler-V1_0-8K-AS_ROM.asm:1462
+SAVE_ADR1    = $07AC =  1964          Assembler-V1_0-8K-AS_ROM.asm:1479
+SAVE_ADR2    = $07BB =  1979          Assembler-V1_0-8K-AS_ROM.asm:1488
+SECTORC      = $F902 = 63746          Assembler-V1_0-8K-AS_ROM.asm:938
+STACKPOINT   = $F7FD = 63485          Assembler-V1_0-8K-AS_ROM.asm:61
+TABFINDAD    = $FFA2 = 65442          Assembler-V1_0-8K-AS_ROM.asm:37
+TABLE        = $0A89 =  2697          Assembler-V1_0-8K-AS_ROM.asm:2002
+TABLE13      = $0AC2 =  2754          Assembler-V1_0-8K-AS_ROM.asm:2017 (unused)
+TABLE14      = $06F3 =  1779          Assembler-V1_0-8K-AS_ROM.asm:1362
+TABLE14F     = $078B =  1931          Assembler-V1_0-8K-AS_ROM.asm:1448
+TABLE2       = $0ADE =  2782          Assembler-V1_0-8K-AS_ROM.asm:2027
+TABLE21      = $0B02 =  2818          Assembler-V1_0-8K-AS_ROM.asm:2042
+TABLE22      = $0BE9 =  3049          Assembler-V1_0-8K-AS_ROM.asm:2138
+TABLE25      = $0AED =  2797          Assembler-V1_0-8K-AS_ROM.asm:2031
+TABLE28      = $0A73 =  2675          Assembler-V1_0-8K-AS_ROM.asm:1995 (unused)
+TABLE29      = $0A7E =  2686          Assembler-V1_0-8K-AS_ROM.asm:1998 (unused)
+TABLE6       = $0AFC =  2812          Assembler-V1_0-8K-AS_ROM.asm:2039
+TABLECOD     = $0BF7 =  3063          Assembler-V1_0-8K-AS_ROM.asm:2152
+TABLEDIT     = $08D9 =  2265          Assembler-V1_0-8K-AS_ROM.asm:1697
+TABLEH1      = $0BDB =  3035          Assembler-V1_0-8K-AS_ROM.asm:2135
+TABLEH10     = $0B70 =  2928          Assembler-V1_0-8K-AS_ROM.asm:2098
+TABLEH2      = $0BCD =  3021          Assembler-V1_0-8K-AS_ROM.asm:2132
+TABLEH3      = $0BBE =  3006          Assembler-V1_0-8K-AS_ROM.asm:2126
+TABLEH4      = $0BB0 =  2992          Assembler-V1_0-8K-AS_ROM.asm:2123
+TABLEH5      = $0BA6 =  2982          Assembler-V1_0-8K-AS_ROM.asm:2117
+TABLEH6      = $0B98 =  2968          Assembler-V1_0-8K-AS_ROM.asm:2111
+TABLEH7      = $0B8C =  2956          Assembler-V1_0-8K-AS_ROM.asm:2106
+TABLEH8      = $0B7E =  2942          Assembler-V1_0-8K-AS_ROM.asm:2103
+TABLEX       = $0A63 =  2659          Assembler-V1_0-8K-AS_ROM.asm:1989
+TABLE_AS     = $03D3 =   979          Assembler-V1_0-8K-AS_ROM.asm:822
+TABLE_DS     = $0460 =  1120          Assembler-V1_0-8K-AS_ROM.asm:952
+TBLFLBY      = $0779 =  1913          Assembler-V1_0-8K-AS_ROM.asm:1441
+TBLFLDT      = $0767 =  1895          Assembler-V1_0-8K-AS_ROM.asm:1436
+TBLFLSR      = $0756 =  1878          Assembler-V1_0-8K-AS_ROM.asm:1430
+TBLMVDT      = $06D5 =  1749          Assembler-V1_0-8K-AS_ROM.asm:1352
+TBLMVLN      = $06E7 =  1767          Assembler-V1_0-8K-AS_ROM.asm:1357
+TBLMVSR      = $06C4 =  1732          Assembler-V1_0-8K-AS_ROM.asm:1346
+TBLSV1       = $07CE =  1998          Assembler-V1_0-8K-AS_ROM.asm:1499
+TBLSV2       = $07DB =  2011          Assembler-V1_0-8K-AS_ROM.asm:1503
+TOTBYTECNT   = $FFC0 = 65472          Assembler-V1_0-8K-AS_ROM.asm:928
+TXD          = $003C =    60          Assembler-V1_0-8K-AS_ROM.asm:138
+USEFUL       = $00DD =   221          Assembler-V1_0-8K-AS_ROM.asm:258
+UZUN         = $0343 =   835          Assembler-V1_0-8K-AS_ROM.asm:703
+YAZ          = $0A1F =  2591          Assembler-V1_0-8K-AS_ROM.asm:1932
+YAZIM        = $0373 =   883          Assembler-V1_0-8K-AS_ROM.asm:741 (unused)
+_end         = $1F8E =  8078          Assembler-V1_0-8K-AS_ROM.asm:70 (unused)
+_size        = $1F8E =  8078          Assembler-V1_0-8K-AS_ROM.asm:70 (unused)
+
+
+total time: 4.8716 sec.
+no errors
