@@ -1,5 +1,10 @@
+;V12 SUB IMPROVED
+;   -LOAD GARBAGE PROBLEM SOLVED!
+;   -GREETING changed
+;V11 TEXT Editor added
+;   -esc behaviour in input corrected!
 ;V10 PROMPT, HEXOUT, DELAY, PRINT, TXD, RXD COMMANDS ADDED TO ASSEMBLER
-;	-INIT PERIPHERALS IMPROVED
+;	-INIT PERIPHERALS IMPROVED: 8251 init problem solved
 ;	-Code start section cleared
 ;v9 Renamed as Assembler-v2_0-as_ROM.asm
 ;v9 HEX SAVE CHECKSUM ADDED!
@@ -112,6 +117,10 @@ COMMVAR         EQU     0FF7EH      ;COMMAND INPUT VARIABLE (2 BYTE)
 ;XXXX           EQU     0FF80H      ; FIRST EMPTY SYSTEM VARIABLE!
 INTADRS			EQU		0FF80H 		; NEW INTERRUPT VECTOR
 NMIADRS			EQU     0FF82H		; NEW NMI VECTOR
+; --- TEXT EDITOR DEĞİŞKENLERİ ---
+TXT_START_ADR   EQU     0FF84H      ; Metin düzenlemenin başladığı satır adresi
+TXT_CURSOR_ADR  EQU     0FF86H      ; O an düzenlenen karakterin adresi
+TXT_MAX_ADR     EQU     0FF88H      ; İmlecin ulaştığı en ileri adres (00h koymak için)
 
 
 ; --- STACK İŞARETÇİSİ ---
@@ -144,8 +153,8 @@ UART_CMD_WORD   EQU     037H    ; COMMAND: Tx/Rx Enable, Error Reset, RTS/DTR Lo
 ;
 	.org 00000H    ;CHANGE 0000 TO RUN IN ROM!
 	;
-	JP BASLA
-    ;JP GREET
+	JP INIT       ;for ROM use
+    ;JP GREET        ;for RAM use
 	
 ;-----------------------------------------------------------------------------------
 ;   UNCOMMENT THIS TO RUN IN ROM
@@ -168,9 +177,9 @@ UART_CMD_WORD   EQU     037H    ; COMMAND: Tx/Rx Enable, Error Reset, RTS/DTR Lo
 
 
 	
-     .ORG 0100H
+     .ORG 0100H        ;FOR ROM USE
 
-BASLA:	
+INIT:	
     LD SP,STACKPOINT  ; STACK AT THE END OF  RAM
 	LD HL, INPUT;    MA_IN	  ;DEFAULT INTERUPT ROUTINE IS MA_IN PROGRAM
 	LD (INTADRS),HL
@@ -221,6 +230,9 @@ INPUT_LOOP:
     JP Z, PARSER   
     CP 08H          ;BACKSPACE
     JP Z, BCKSPC
+    
+    CP 01BH
+    JP Z, INPUT_LOOP  ;ESC BEHAVIOUR IMPROVED
    
 
     CALL TXD        ;ECHO CHAR
@@ -304,6 +316,9 @@ PARSER_LOOP:    ;COMMAND LENGHT:B, BUFFER:HL
 
     CP 'W'
     JP Z, WARMSTART   ;WARMSTART
+
+    CP 'T'
+    JP Z, TEXT_EDITOR_CMD
 
 
 
@@ -421,7 +436,32 @@ NOT_A_HEX:
     SCF                 ; Carry bayrağını set et (hata sinyali)
     RET    
 ;------------hex to byte from buffer ended------------------------------------
-
+;****************************************************************
+;* PARSE_HEX_ADDRESS ALT PROGRAMI                               *
+;* Açıklama: HL'nin gösterdiği yerden başlayarak 1-4 haneli hex *
+;* bir adresi okur. Sonucu DE register'ına yazar.               *
+;* Girdi: HL = Buffer'da adresin başladığı yer                   *
+;* Çıktı: Başarılıysa -> Carry=0, DE=16-bit adres, HL=sonraki karakter*
+;* Başarısızsa -> Carry=1 (hiç hex karakter bulunamadıysa)      *
+;****************************************************************
+; ------------------------------------------------------------
+; PARSE_HEX_ADDRESS  (Z80 mnemonics, 8085-compatible)
+;  In : HL -> girdi metni (hexdigit'lerle başlıyor olabilir)
+; Out : CF=0 ve DE = parsed 16-bit değer, HL = ilk hexdigit olmayan
+;       CF=1 (hata: hiç hexdigit yok) ve HL girişteki konumda
+; Clobbers: A, B, C, D, E, F   (HL çağrı sözleşmesine göre güncellenir)
+; Notlar:
+; - En fazla 4 hexdigit okunur (16-bit sınırı). 5. hexdigit bırakılır.
+; - '0'..'9', 'A'..'F', 'a'..'f' kabul edilir (buffer değiştirilmez).
+; ------------------------------------------------------------
+;******************************************************************************
+;* PARSE_HEX_ADDRESS (Nihai Sürüm - Basit, Kararlı, Z80 Sözdizimli)           *
+;* Açıklama: HL'nin gösterdiği yerden 1-4 haneli hex adresi okur.            *
+;* Sonucu sağa dayalı olarak hesaplar (Örn: "F" -> 000FH, "1F4" -> 01F4H).     *
+;* Girdi: HL = Ana buffer'da adresin başladığı yer                            *
+;* Çıktı: Başarılıysa -> Carry=0, DE=16-bit adres, HL=sayıdan sonraki karakter *
+;* Başarısızsa -> Carry=1 (hiç hex karakter bulunamadıysa)             *
+;******************************************************************************
 ;******************************************************************************
 ;* PARSE_HEX_ADDRESS (Sıfırdan Yazılmış Nihai Versiyon)                       *
 ;* Açıklama: HL'nin gösterdiği yerden 1-4 haneli hex adresi okur.            *
@@ -506,7 +546,14 @@ PARSE_ERROR_FINAL:
     RET
 ;----------------ADRESS PARSER (FROM BUFFER) ENDED-----------------  
 
-
+;******************************************************************************
+;* PARSE_HEX_BYTE ALT PROGRAMI (Yeni)                                         *
+;* Açıklama: HL'nin gösterdiği yerden 1 veya 2 haneli hex sayıyı okur.        *
+;* Sonucu 8-bit olarak A register'ına yazar.                                  *
+;* Girdi: HL = Ana buffer'da sayının başladığı yer                            *
+;* Çıktı: Başarılıysa -> Carry=0, A=8-bit değer, HL=sayıdan sonraki karakter   *
+;* Başarısızsa -> Carry=1 (hiç hex karakter bulunamadıysa)               *
+;******************************************************************************
 ;******************************************************************************
 ;* PARSE_HEX_BYTE (YENİ, GÜVENLİ ve BASİT Versiyon)                           *
 ;* Açıklama: HL'nin gösterdiği yerden 1 veya 2 haneli hex sayıyı okur.        *
@@ -654,7 +701,200 @@ KONTROL_STD:
 
 DONEUP:
     RET    
-	
+;-------------uppercase ended--------------------------------
+
+;******************************************************************************
+;* TEXT_EDITOR_CMD - Metin Düzenleyici (Tam ve Düzeltilmiş Sürüm)             *
+;* Açıklama: Belirtilen adresten itibaren 32 byte'lık metni interaktif olarak *
+;* düzenler. Backspace ve Enter tuşlarını destekler. ESC ile çıkıldığında     *
+;* metnin sonuna 00H ekler.                                                    *
+;******************************************************************************
+TEXT_EDITOR_CMD:
+    ; --- Komutun geri kalanını doğrula ("EXT") ---
+    INC HL
+    LD A, (HL)
+    CP 'E'
+    JP NZ, ERROR_PARSER
+    INC HL
+    LD A, (HL)
+    CP 'X'
+    JP NZ, ERROR_PARSER
+    INC HL
+    LD A, (HL)
+    CP 'T'
+    JP NZ, ERROR_PARSER
+    INC HL
+
+    ; --- Adresi ayrıştır ve değişkenleri başlat ---
+    CALL SKIP_SPACES
+    CALL PARSE_HEX_ADDRESS
+    JP C, ERROR_PARSER      ; Adres bulunamadıysa hata ver
+    LD HL, DE               ; Başlangıç adresini HL'ye al
+    
+    LD (TXT_START_ADR), HL
+    LD (TXT_CURSOR_ADR), HL
+    LD (TXT_MAX_ADR), HL    ; Maksimum adres başlangıçta imleç ile aynı
+
+; --- DÜZENLEME EKRANINI ÇİZME VE DÖNGÜ ---
+TXT_EDIT_START:
+    CALL CRLF
+    CALL DRAW_TEXT_LINE     ; 32 karakterlik metin satırını çiz
+    CALL MOVE_CURSOR_TO_START ; İmleci düzenleme alanının başına çek
+
+TXT_EDIT_LOOP:
+    CALL RXD                ; Bir tuş oku
+
+    ; --- Tuş kontrolleri ---
+    CP 1BH                  ; ESC mi?
+    JP Z, TXT_EDIT_EXIT     ; Evetse, çıkış yap
+
+    CP 0DH                  ; Enter mı?
+    JP Z, TXT_EDIT_FORWARD  ; Evetse, imleci bir ileri al
+
+    CP 08H                  ; Backspace mi?
+    JP Z, TXT_EDIT_BACKWARD ; Evetse, imleci bir geri al
+
+    ; --- Yazdırılabilir karakter mi kontrolü ---
+    CP 20H
+    JP C, TXT_EDIT_LOOP     ; Kontrol karakteriyse (boşluk hariç) yoksay
+    CP 7FH
+    JP NC, TXT_EDIT_LOOP    ; Genişletilmiş ASCII ise yoksay
+
+    ; --- Normal karakteri yaz ve ilerle ---
+    LD HL, (TXT_CURSOR_ADR)
+    LD (HL), A              ; Karakteri belleğe yaz
+    LD A,(HL)        ;ADRESTEKİ GERÇEK VERİYİ GÖSTERİR!
+ 
+  ; 3. Adım: Geri okunan karakterin yazdırılabilir olup olmadığını DENETLE
+    CP 20H
+    JP C, TXT_PRINT_DOT     ; Yazdırılamazsa, nokta basmaya git
+    CP 7FH
+    JP NC, TXT_PRINT_DOT    ; Yazdırılamazsa, nokta basmaya git
+
+    
+
+
+ 
+    CALL TXD                ; Karakteri ekrana bas (üzerine yaz)
+    JP TXT_EDIT_FORWARD_NO_ECHO ; Bellek adresini ve imleç pozisyonunu güncelle
+TXT_PRINT_DOT:
+    ; Karakter yazdırılamaz, onun yerine ekrana nokta bas
+    LD A, '.'
+    CALL TXD
+    JP TXT_EDIT_FORWARD_NO_ECHO ; Her iki durumda da imleci ilerletmek için ortak bölüme atla
+;******************************************************************************
+;* İMLEÇ HAREKETLERİ (DÜZELTİLMİŞ)                                             *
+;******************************************************************************
+
+TXT_EDIT_FORWARD:
+    ; İmleci ileri almadan önce, o pozisyondaki karakteri ekrana bozulma yapmayacak şekilde bas.
+    LD HL, (TXT_CURSOR_ADR)
+    LD A, (HL)
+    CP 20H                  ; Yazdırılabilir karakter mi?
+    JP C, PRINT_DOT_AND_FWD
+    CP 7FH
+    JP NC, PRINT_DOT_AND_FWD
+    CALL TXD                ; Evet, kendisini basarak imleci ilerlet
+    JP TXT_EDIT_FORWARD_NO_ECHO
+PRINT_DOT_AND_FWD:
+    LD A, '.'               ; Hayır, onun yerine nokta basarak imleci ilerlet
+    CALL TXD
+
+TXT_EDIT_FORWARD_NO_ECHO:
+    ; Satır sonu kontrolü: İmlecin satırın dışına taşmasını engelle.
+    LD HL, (TXT_CURSOR_ADR)
+    LD DE, (TXT_START_ADR)
+    PUSH DE                 ; DE'yi (başlangıç adresi) koru
+    OR A                    ; Carry'i temizle
+    SBC HL, DE              ; HL = (mevcut imleç - başlangıç) = ofset
+    LD A, L                 ; Sadece L'ye bakmak yeterli (çünkü fark < 255)
+    CP 31                   ; Ofset 31'e ulaştı mı? (32. ve son karakter)
+    POP DE                  ; DE'yi geri al
+    JP Z, TXT_EDIT_LOOP     ; Evetse, satır sonundayız, daha fazla ilerleme
+
+    ; İmleç adresini bir artır
+    LD HL, (TXT_CURSOR_ADR)
+    INC HL
+    LD (TXT_CURSOR_ADR), HL
+    
+    ; Maksimum imleç pozisyonunu (null terminator için) doğru kaydet.
+    LD DE, (TXT_MAX_ADR)
+    PUSH HL                 ; HL'yi (yeni imleç) koru
+    OR A                    ; Carry'i temizle
+    SBC HL, DE              ; HL = yeni_imleç - eski_maks
+    POP HL                  ; HL'yi geri al
+    JP M, TXT_EDIT_LOOP     ; Eğer sonuç negatifse (HL < DE), güncelleme yapma, döngüye dön
+                            ; JP C de kullanılabilir, SBC sonrası C=1 ise borç alındı demektir.
+    
+    ; Eğer sonuç pozitif veya sıfırsa (HL >= DE), yeni maksimum pozisyonu kaydet
+    LD (TXT_MAX_ADR), HL
+    JP TXT_EDIT_LOOP
+
+TXT_EDIT_BACKWARD:
+    ; Satır başı kontrolü
+    LD HL, (TXT_CURSOR_ADR)
+    LD DE, (TXT_START_ADR)
+    OR A                    ; Carry'i temizle
+    SBC HL, DE
+    LD A, H                 ; Sonuç 0 ise (HL == DE) satır başındayız
+    OR L
+    JP Z, TXT_EDIT_LOOP     ; Satır başındaysan daha fazla geri gitme
+
+    ; İmleç adresini bir azalt ve ekranda geri git
+    LD HL, (TXT_CURSOR_ADR)
+    DEC HL
+    LD (TXT_CURSOR_ADR), HL
+    LD A, 08H               ; Ekranda imleci bir geri çek
+    CALL TXD
+    JP TXT_EDIT_LOOP
+
+;******************************************************************************
+;* ÇIKIŞ VE YARDIMCI RUTİNLER                                                 *
+;******************************************************************************
+
+TXT_EDIT_EXIT:
+    LD HL, (TXT_MAX_ADR)    ; İmlecin ulaştığı en son adresi al
+    LD A, 0                 ; Null karakteri
+    LD (HL), A              ; Metnin sonuna ekle
+    CALL CRLF
+    JP INPUT                ; Ana menüye dön
+
+DRAW_TEXT_LINE:
+    LD HL, (TXT_START_ADR)
+    LD A, H
+    CALL HEXOUT
+    LD A, L
+    CALL HEXOUT
+    LD A, ':'
+    CALL TXD
+    LD A, ' '
+    CALL TXD
+    LD B, 32                ; 32 karakter bas
+DRAW_TEXT_LOOP:
+    LD A, (HL)
+    CP 20H                  ; Yazdırılabilir karakter mi?
+    JP C, DRAW_DOT_CHAR
+    CP 7FH
+    JP NC, DRAW_DOT_CHAR
+    CALL TXD                ; Evet, kendisini bas
+    JP DRAW_CHAR_DONE
+DRAW_DOT_CHAR:
+    LD A, '.'               ; Hayır, nokta bas
+    CALL TXD
+DRAW_CHAR_DONE:
+    INC HL
+    DEC B
+    JP NZ, DRAW_TEXT_LOOP
+    RET
+
+MOVE_CURSOR_TO_START:
+    LD B, 32                ; DÜZELTME: İmleci 32 karakter geri çek (sadece metin alanı kadar)
+MOVE_CURSOR_LOOP:
+    LD A, 08H
+    CALL TXD
+    DEC B
+    JP NZ, MOVE_CURSOR_LOOP
+    RET
 
 
 
@@ -1186,6 +1426,13 @@ AS_SYNTAX_ERROR:
     CALL PRINT
     JP AS_DON               
 
+
+;---------------INTERPRETER STARTS HERE--------------------------
+
+;---------------INTERPRETER STARTS HERE--------------------------            
+
+
+;---------------INTERPRETER STARTS HERE--------------------------
 
 ;---------------INTERPRETER STARTS HERE--------------------------
 
@@ -2169,25 +2416,6 @@ SAVE_CMD:
 	
 
 
-;SAVE_ADR1:
-;	LD HL,TBLSV1
-;	CALL PRINT
-
-;	CALL BYTEIN2
-;	LD HL,(ADRSINP)
-;	RET
-
-;SAVE_ADR2:
-;	LD HL,TBLSV2
-;	CALL PRINT
-	
-;	CALL BYTEIN2
-;	LD DE,0
-;	LD HL, (ADRSINP)
-;	EX DE,HL     ;DE HOLDS END ADRESS
-;	RET
-	
-	
 
 	
 ;-------------save end----------------
@@ -2726,13 +2954,16 @@ SUBROUTINES:
 	CALL TXD
 	LD A,0DH
 	CALL TXD
+
+    CALL CRLF 
+    LD HL,TABLESUB
+    CALL PRINT
+    CALL CRLF
 	
 		
 	LD HL,TABLE22
 	CALL PRINT
 	
-	
-;HELP1:
 	LD HL,TXD
 	LD A,H
 	CALL HEXOUT
@@ -2761,6 +2992,23 @@ SUBROUTINES:
 	CALL TXD
 	LD A,0DH
 	CALL TXD
+
+	LD HL,TABLERXNP
+	CALL PRINT
+
+
+    LD HL,RXNP
+	LD A,H
+	CALL HEXOUT
+	LD A,L
+	CALL HEXOUT
+	
+	LD A,0AH
+	CALL TXD
+	LD A,0DH
+	CALL TXD
+
+
 		
 	LD HL,TABLEH2
 	CALL PRINT
@@ -2845,6 +3093,23 @@ SUBROUTINES:
 	CALL TXD
 	LD A,0DH
 	CALL TXD
+
+
+
+    LD HL,TABLECRLF
+	CALL PRINT
+
+
+    LD HL,CRLF
+	LD A,H
+	CALL HEXOUT
+	LD A,L
+	CALL HEXOUT
+	
+	LD A,0AH
+	CALL TXD
+	LD A,0DH
+	CALL TXD
 	
 	
 	JP INPUT
@@ -2915,7 +3180,7 @@ NALPHAR:
 ;------------------BYTE CONVERTER FINISHED HERE---------------
 
 
-;---------------LOAD HEX FILE ROUTINE
+;---------------LOAD HEX FILE ROUTINE --------------------------
 LOADERZ:
     INC HL
     DEC B ; H RECEIVED, SO DECREASE POINTER AND COUNTER
@@ -2971,16 +3236,37 @@ LOAD_ED:            ;load comlett, turn to main loop (INPUT)
 
 
 ; -------- RX kuyruğunu boşalt --------
-GETGARBAGE:   ;RX ROUTINE WITHOUT POLL WAIT
+;****************************************************************
+;* GETGARBAGE - Düzeltilmiş ve Zaman Aşımlı Sürüm               *
+;* Açıklama: Seri porttan gelen veri akışı kesilene kadar       *
+;* bekleyerek tüm "çöp" veriyi temizler.                        *
+;****************************************************************
+GETGARBAGE:
+    PUSH DE                 ; DE register'ını koru
+    LD DE, 0FFFFH           ; Zaman aşımı sayacını başlat (bu değer ayarlanabilir)
 
-fl_loop:
-    in   a,(SER_STAT)
-    and  RXRDY_MASK
-    jr   z,fl_done          ; hazır değil -> çık
-    in   a,(SER_DATA)        ; baytı çöpe at
-    jr   fl_loop
-fl_done:
-    ret	
+GARBAGE_WAIT_LOOP:
+    CALL RXNP               ; Karakter var mı diye beklemeden kontrol et (Sonuç Carry'de)
+    JP NC, GARBAGE_CHAR_FOUND ; Carry=0 ise karakter bulundu, timeout'u sıfırla
+
+    ; --- Karakter bulunamadı, zaman aşımını azalt ---
+    DEC DE
+    LD A, D
+    OR E
+    JP NZ, GARBAGE_WAIT_LOOP ; Sayaç sıfır değilse beklemeye devam et
+    
+    ; --- Zaman aşımına ulaşıldı, veri akışı bitti demektir ---
+    JP GARBAGE_EXIT
+
+GARBAGE_CHAR_FOUND:
+    ; Karakter bulundu (ve RXNP tarafından A'ya okundu).
+    ; Sadece zaman aşımı sayacını sıfırla ve daha fazla karakter var mı diye bekle.
+    LD DE, 0FFFFH           ; Sayacı yeniden doldur
+    JP GARBAGE_WAIT_LOOP
+
+GARBAGE_EXIT:
+    POP DE                  ; DE register'ını geri yükle
+    RET
 
  
 	
@@ -3104,7 +3390,7 @@ LOAD_ERROR:
 
 TAB_LOAD_ERR:
         .DB 0AH,0DH
-        .DB 'Checksum Err!'
+        .DB 'Checksum Error!'
         .DB 00H
 	
 	
@@ -3365,6 +3651,32 @@ LOPTR: 	IN A,(01H)
         IN A,(00H)   ;RECEIVE CHAR
 	RET
 	
+;****************************************************************
+;* RXNP - Non-Polling (Bloklamayan) Karakter Alma Rutini        *
+;* ------------------------------------------------------------ *
+;* Açıklama: 8251'in durumunu kontrol eder. Eğer okunacak bir    *
+;* karakter varsa, onu A register'ına alır ve Carry=0 *
+;* ile döner. Karakter yoksa, beklemeden Carry=1 ile  *
+;* döner.                                             *
+;* Çıktı    : Carry=0 ise A = Alınan karakter                    *
+;* Carry=1 ise A'nın içeriği anlamsızdır.             *
+;****************************************************************
+RXNP:
+    IN A, (SER_STAT)        ; 8251 Durum portunu oku
+    AND RXRDY_MASK          ; RxRDY (Alıcı Hazır) bitini kontrol et
+    JP Z, RXNP_NO_CHAR      ; Eğer bit 0 ise (Zero flag=1), okunacak karakter yok
+
+    ; --- Karakter mevcut ---
+    IN A, (SER_DATA)        ; Veri portundan karakteri A'ya oku
+    OR A                    ; Carry bayrağını temizle (Başarı durumu)
+    RET
+
+RXNP_NO_CHAR:
+    SCF                     ; Carry bayrağını set et (Karakter yok durumu)
+    RET 
+
+
+
 ;----------------------------COMM ROUTINES ENDED HERE-------------------------        
 
 TABLEX:	
@@ -3381,15 +3693,9 @@ TABLE29:
 	
 TABLE: 	
     .DB 0CH,0DH
-	.DB 'Efex-z80 '
-	.DB 'By M.Peker '
-    .DB 'BUF-ROM-V10'
-
+	.DB 'Efex ROM Monitor V2.0 '
 	.DB 0AH,0DH
-	.DB 'Creative Commons '
-	.DB 'BY-NC-ND 4.0'
-	.DB 0AH,0DH
-    .DB '2025'
+    .DB 'By Dr.Peker 2025'
     .DB 0AH,0DH
     .DB 0AH,0DH 
 	.DB 'Ready.'
@@ -3472,6 +3778,10 @@ TABLE21:
 
 	.DB 0AH,0DH
 
+    .DB ' TEXT  edit memory adress  '
+
+	.DB 0AH,0DH
+
     .DB ' DUMP  memory content '
 	.DB 0AH,0DH
 
@@ -3495,24 +3805,18 @@ TABLE21:
 	.DB ' WARM  warmstart monitor'
 
 	.DB 0AH,0DH
-	
-	
-
-	
-	
-
-	
-	
 		
-
-	
-
-	
-	
+    .DB 00H
 
 
-	.DB 00H
-	
+TABLESUB:
+
+    .DB ' Routine names can be used in Assembler!'
+    .DB 0AH,0DH
+    .DB ' CALL DELAY .. JP Z, PROMPT .. CALL HEXOUT..'
+    .DB 0AH,0DH
+    
+    .DB 00H
 	
 TABLEH10:	
 	.DB 'DELAY  (S):  $'
@@ -3572,6 +3876,16 @@ TABLE22:
 	
 	.DB 'TXD    (S):  $'
 	.DB 000H
+
+TABLECRLF:
+
+	
+	.DB 'CRLF   (S):  $'
+	.DB 000H    
+
+TABLERXNP:
+	.DB 'RXNP   (S):  $'
+	.DB 000H    
 	
 TABLE_ASS:
 	.DB 0AH,0DH
@@ -4353,5 +4667,4 @@ CODEND:	.DB 0,0,0,0,0,0,0,0
 
 	
 		
-
 	.END
