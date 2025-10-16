@@ -2958,7 +2958,9 @@ SUBROUTINES:
     CALL CRLF 
     LD HL,TABLESUB
     CALL PRINT
+    
     CALL CRLF
+
 	
 		
 	LD HL,TABLE22
@@ -3007,26 +3009,38 @@ SUBROUTINES:
 	CALL TXD
 	LD A,0DH
 	CALL TXD
-
+		
 
 		
-	LD HL,TABLEH2
+	LD HL,TABLEH2 ;WORDIN
 	CALL PRINT
 
-
-
-	
-	
 	LD HL,BYTEIN2
 	LD A,H
 	CALL HEXOUT
 	LD A,L
 	CALL HEXOUT
 	
-	LD HL,TABLEH3
+	LD HL,TABLEH3 ; '->  $'
 	CALL PRINT
+    LD HL,ADRSINP
+    LD A,H
+    CALL HEXOUT
+    LD A,L 
+    CALL HEXOUT
+    LD A,'-'
+    CALL TXD
+    LD HL,ADRSINP+1
+    LD A,H
+    CALL HEXOUT
+    LD A,L 
+    CALL HEXOUT
+
+
+    CALL CRLF
+
 	
-	LD HL,TABLEH4
+	LD HL,TABLEH4  ;BYTEIN 
 	CALL PRINT
 	
 	LD HL,BYTEIN1
@@ -3035,8 +3049,17 @@ SUBROUTINES:
 	LD A,L
 	CALL HEXOUT
 
-	LD HL,TABLEH5
+    LD HL,TABLEH3 ; '->  $'
 	CALL PRINT
+    LD HL,DATAINP
+    LD A,H
+    CALL HEXOUT
+    LD A,L 
+    CALL HEXOUT
+    CALL CRLF
+
+	;LD HL,TABLEH5
+	;CALL PRINT
 	
 	LD HL,TABLEH6
 	CALL PRINT
@@ -3094,18 +3117,15 @@ SUBROUTINES:
 	LD A,0DH
 	CALL TXD
 
-
-
     LD HL,TABLECRLF
 	CALL PRINT
-
-
-    LD HL,CRLF
+	
+	LD HL,CRLF
 	LD A,H
 	CALL HEXOUT
 	LD A,L
 	CALL HEXOUT
-	
+
 	LD A,0AH
 	CALL TXD
 	LD A,0DH
@@ -3808,16 +3828,15 @@ TABLE21:
 		
     .DB 00H
 
-
 TABLESUB:
 
     .DB ' Routine names can be used in Assembler!'
     .DB 0AH,0DH
-    .DB ' CALL DELAY .. JP Z, PROMPT .. CALL HEXOUT..'
+    .DB ' CALL DELAY, JP PROMPT, CALL HEXOUT....'
     .DB 0AH,0DH
     
     .DB 00H
-	
+
 TABLEH10:	
 	.DB 'DELAY  (S):  $'
 	.DB 000H
@@ -3847,7 +3866,8 @@ TABLEH6:
 	
 TABLEH5:
 	
-	.DB ' -> FF42'
+	.DB ' ->  '
+    .DW DATAINP
 	.DB 0AH,0DH
 	.DB 000H
 	
@@ -3859,8 +3879,8 @@ TABLEH4:
 TABLEH3:	
 	
 	
-	.DB ' -> FF43-FF44'
-	.DB 0AH,0DH
+	.DB ' ->  $'
+
 	.DB 000H
 
 TABLEH2:            ;
@@ -3872,20 +3892,14 @@ TABLEH1:
 	.DB 000H	
 	
 TABLE22:
-
-	
 	.DB 'TXD    (S):  $'
 	.DB 000H
-
-TABLECRLF:
-
-	
-	.DB 'CRLF   (S):  $'
-	.DB 000H    
-
 TABLERXNP:
 	.DB 'RXNP   (S):  $'
-	.DB 000H    
+	.DB 000H
+TABLECRLF:
+	.DB 'CRLF   (S):  $'
+	.DB 000H   
 	
 TABLE_ASS:
 	.DB 0AH,0DH
@@ -4648,7 +4662,10 @@ AFTERCOD:
     .DW BYTEIN2
 
 	.DB '_CALL CRLF',3,0CDH
-    .DW CRLF		
+    .DW CRLF
+
+ 	.DB '_CALL RXNP',3,0CDH
+    .DW RXNP  		
 
 
 
